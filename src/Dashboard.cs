@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.4.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.5.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -58,6 +58,12 @@ internal sealed partial class MainForm
         if (!File.Exists(alias)) { status.Text = "WinGet no está disponible en este usuario. No se instalará automáticamente."; return; }
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/k winget upgrade" + (upgrade ? " --all" : "")) { UseShellExecute = true });
     }
+    void AddBrand(FlowLayoutPanel card, string manufacturer)
+    {
+        string brand = BrandLogo.Resolve(manufacturer);
+        if(brand == null || card.Controls.OfType<BrandLogo>().Any(c => c.Brand == brand)) return;
+        var logo = new BrandLogo(brand); card.Controls.Add(logo); card.Controls.SetChildIndex(logo, Math.Min(2,card.Controls.Count-1));
+    }
     Button ActionButton(string caption, Action action)
     {
         var button = new Button { Text = caption, AutoSize = true, Padding = new Padding(5), Margin = new Padding(0, 8, 0, 0), FlatStyle = FlatStyle.Flat, BackColor = Color.White, ForeColor = BlueColor };
@@ -75,7 +81,7 @@ internal sealed partial class MainForm
     {
         var card = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(18), Margin = new Padding(7), BackColor = Color.White, Width = 300 };
         var heading = new Label { Text = title, AutoSize = true, Font = new Font(Font, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 0, 14) };
-        card.Controls.Add(new ComponentPicture { Kind = title, Width = 70, Height = 55, AccessibleName = title, Margin = new Padding(0, 0, 0, 10) });
+        card.Controls.Add(new ComponentPicture { Kind = title == "Almacenamiento" ? title + " " + Read("Tipos de almacenamiento") : title, Width = 108, Height = 78, AccessibleName = title, Margin = new Padding(0, 0, 0, 10) });
         card.Controls.Add(heading); cards.Add(card); dashboard.Controls.Add(card); return card;
     }
     Label Line(FlowLayoutPanel card, string text, bool prominent = false)
@@ -128,10 +134,11 @@ internal sealed partial class MainForm
             Line(identity, "Nombre: " + Read("Nombre del equipo"));
             identity.Controls.Add(ActionButton("Copiar número de serie", () => { if (current != null) Clipboard.SetText(Read("Serie del equipo (SMBIOS)")); }));
             identity.Controls.Add(ActionButton("Buscar fabricante", SearchManufacturer));
-            Line(identity, current == null ? "" : current.Manufacturer.ToUpperInvariant(), true);
+            AddBrand(identity, current == null ? "" : current.Manufacturer);
             Help(identity, "El modelo y la serie son los datos registrados por el fabricante en el equipo.");
 
             var cpu = Card("⚙", "Procesador");
+            AddBrand(cpu, Read("Marca del procesador"));
             Line(cpu, Read("Marca del procesador"), true);
             Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
             cpu.Controls.Add(ActionButton("Explorar componentes", () => tabs.SelectedTab = driverPage));
@@ -148,11 +155,16 @@ internal sealed partial class MainForm
                 Line(ram, "Disponible: " + current.RamAvailableGiB.Value.ToString("0.0") + " GiB");
             }
             else Line(ram, "Uso de RAM: no disponible");
+            if(current != null) foreach(var module in current.Hardware.Where(h => h.Category == "Memoria RAM"))
+            {
+                string maker; if(module.Properties.TryGetValue("Fabricante", out maker)) AddBrand(ram, maker);
+            }
             Line(ram, Read("Ranuras RAM"));
             InlineDetails(ram, "Ver módulos por ranura", "Módulos RAM");
             Help(ram, "Es la memoria de trabajo de los programas abiertos. Pulsa Actualizar para obtener otra lectura; no es un monitor continuo.");
 
             var video = Card("", "Memoria de video");
+            AddBrand(video, Read("Adaptadores gráficos"));
             Line(video, Read("Adaptadores gráficos"), true);
             Line(video, "Integrada / dedicada: pendiente de verificación DXGI");
             Line(video, Read("Memoria gráfica DXGI"));
@@ -235,6 +247,7 @@ internal sealed partial class MainForm
                     if (child is Label) child.MaximumSize = new Size(inner, 0);
                     else if (child is UsageBar) child.Width = inner;
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
+                    else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
                 }
             }
@@ -247,9 +260,9 @@ internal sealed partial class MainForm
         string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "qa"); Directory.CreateDirectory(dir);
         using (var form = new MainForm())
         {
-            form.current = new Snapshot { Manufacturer = "Equipo de prueba", Model = "Modelo de prueba", RamTotalGiB = 16, RamAvailableGiB = 9.6, PnpReadComplete = true };
+            form.current = new Snapshot { Manufacturer = "HP", Model = "Modelo de prueba", RamTotalGiB = 16, RamAvailableGiB = 9.6, PnpReadComplete = true };
             foreach (var pair in new[] {
-                new[] { "Fabricante del equipo", "Fabricante de prueba" }, new[] { "Modelo del equipo", "Computador de prueba con nombre extenso para comprobar ajuste de líneas" },
+                new[] { "Fabricante del equipo", "HP" }, new[] { "Marca del procesador", "INTEL" }, new[] { "Modelo del equipo", "Computador de prueba con nombre extenso para comprobar ajuste de líneas" },
                 new[] { "Serie del equipo (SMBIOS)", "PRUEBA123456" }, new[] { "Nombre del equipo", "MI-PC" }, new[] { "Procesador", "Intel Core i5 · procesador de prueba" },
                 new[] { "Núcleos / procesadores lógicos", "4 / 8" }, new[] { "Memoria RAM instalada", "16 GB" }, new[] { "Windows", "Windows 11 Pro" },
                 new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
@@ -265,6 +278,8 @@ internal sealed partial class MainForm
             unknown.Properties["Controlador"] = "No instalado (ejemplo)";
             form.current.Hardware.Add(unknown);
             form.RenderDashboard(); form.RenderHardwareBrowser(); form.Show(); Application.DoEvents();
+            if(BrandLogo.Resolve("HP Inc.") != "hp" || BrandLogo.Resolve("Advanced Micro Devices, Inc.") != "amd" || BrandLogo.Resolve("Fabricante desconocido") != null) throw new InvalidOperationException("Detección de marca incorrecta");
+            foreach(string brand in new[] { "intel", "amd", "arm", "hp", "dell", "lenovo", "asus", "acer", "nvidia", "samsung", "qualcomm" }) if(BrandLogo.Get(brand).Width == 0) throw new InvalidOperationException("Logo inválido");
             var biosCard = form.cards.First(c => c.Controls.OfType<Button>().Any(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie"));
             var expand = biosCard.Controls.OfType<Button>().Single(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie");
             int collapsedHeight = biosCard.Height;

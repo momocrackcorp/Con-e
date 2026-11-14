@@ -215,24 +215,43 @@ internal sealed class ComponentPicture : Control
     protected override void OnPaint(PaintEventArgs e) { base.OnPaint(e); PaintSymbol(e.Graphics, ClientRectangle, Kind); }
     static void PaintSymbol(Graphics g, Rectangle bounds, string kind)
     {
+        kind = kind.ToLowerInvariant();
         g.SmoothingMode = SmoothingMode.AntiAlias;
         var state = g.Save(); g.TranslateTransform(bounds.Left, bounds.Top); g.ScaleTransform(bounds.Width / 64f, bounds.Height / 64f);
         using (var fill = new SolidBrush(Color.FromArgb(232, 240, 253))) g.FillEllipse(fill, 0, 0, 64, 64);
         using (var pen = new Pen(Color.FromArgb(40, 91, 181), 2.5f))
         {
-            if (kind.Contains("RAM") || kind.Contains("Memoria"))
+            if (kind.Contains("video") || kind.Contains("gráficos"))
+            {
+                g.DrawRectangle(pen, 7, 17, 48, 30); g.DrawLine(pen, 56, 12, 56, 51);
+                g.DrawEllipse(pen, 14, 22, 20, 20); g.DrawLine(pen, 24, 22, 24, 42); g.DrawLine(pen, 14, 32, 34, 32);
+                g.DrawRectangle(pen, 39, 22, 10, 7); g.DrawRectangle(pen, 39, 34, 10, 7);
+                for(int i=0;i<6;i++)g.DrawLine(pen, 12+i*6, 48, 12+i*6, 52);
+            }
+            else if (kind.Contains("ram") || kind.Contains("memoria"))
             {
                 g.DrawRectangle(pen, 9, 21, 46, 22); for (int i = 0; i < 3; i++) g.DrawRectangle(pen, 15 + i * 13, 26, 8, 10);
                 for (int i = 0; i < 7; i++) g.DrawLine(pen, 13 + i * 6, 44, 13 + i * 6, 48);
             }
-            else if (kind.Contains("Procesador") || kind.Contains("Procesadores") || kind.Contains("BIOS") || kind.Contains("placa") || kind.Contains("Placa"))
+            else if (kind.Contains("procesador") || kind.Contains("bios") || kind.Contains("placa"))
             {
                 g.DrawRectangle(pen, 18, 18, 28, 28); g.DrawRectangle(pen, 24, 24, 16, 16);
                 for (int i = 0; i < 4; i++) { int x = 21 + i * 7; g.DrawLine(pen, x, 11, x, 17); g.DrawLine(pen, x, 47, x, 53); g.DrawLine(pen, 11, x, 17, x); g.DrawLine(pen, 47, x, 53, x); }
             }
-            else if (kind.Contains("Almacenamiento")) { g.DrawRectangle(pen, 15, 12, 34, 40); g.DrawEllipse(pen, 22, 18, 20, 20); g.DrawLine(pen, 32, 28, 43, 42); g.DrawLine(pen, 21, 46, 28, 46); }
-            else if (kind.Contains("Red") || kind.Contains("USB")) { g.DrawRectangle(pen, 24, 9, 16, 12); g.DrawLine(pen, 32, 22, 32, 36); g.DrawLine(pen, 13, 36, 51, 36); g.DrawLine(pen, 13, 36, 13, 44); g.DrawLine(pen, 51, 36, 51, 44); g.DrawRectangle(pen, 7, 44, 13, 10); g.DrawRectangle(pen, 44, 44, 13, 10); }
-            else if (kind.Contains("Audio")) { g.DrawLines(pen, new[] { new Point(15, 26), new Point(23, 26), new Point(34, 16), new Point(34, 48), new Point(23, 38), new Point(15, 38), new Point(15, 26) }); g.DrawArc(pen, 27, 14, 25, 35, -60, 120); }
+            else if (kind.Contains("almacenamiento") && kind.Contains("nvme"))
+            {
+                g.DrawRectangle(pen, 5, 24, 54, 18); for(int i=0;i<3;i++)g.DrawRectangle(pen,12+i*13,28,9,10);
+                g.DrawEllipse(pen, 7, 30, 4, 4); for(int i=0;i<5;i++)g.DrawLine(pen,49+i*2,42,49+i*2,46);
+            }
+            else if (kind.Contains("almacenamiento") && kind.Contains("ssd") && !kind.Contains("hdd"))
+            {
+                g.DrawRectangle(pen, 12, 11, 40, 42); g.DrawRectangle(pen, 19, 18, 26, 22);
+                g.DrawLine(pen, 19, 47, 33, 47); g.DrawLine(pen, 38, 47, 46, 47);
+                using(var font=new Font("Segoe UI",8,FontStyle.Bold))g.DrawString("SSD",font,Brushes.DarkSlateBlue,20,23);
+            }
+            else if (kind.Contains("almacenamiento")) { g.DrawRectangle(pen, 15, 12, 34, 40); g.DrawEllipse(pen, 22, 18, 20, 20); g.DrawLine(pen, 32, 28, 43, 42); g.DrawLine(pen, 21, 46, 28, 46); }
+            else if (kind.Contains("red") || kind.Contains("usb")) { g.DrawRectangle(pen, 24, 9, 16, 12); g.DrawLine(pen, 32, 22, 32, 36); g.DrawLine(pen, 13, 36, 51, 36); g.DrawLine(pen, 13, 36, 13, 44); g.DrawLine(pen, 51, 36, 51, 44); g.DrawRectangle(pen, 7, 44, 13, 10); g.DrawRectangle(pen, 44, 44, 13, 10); }
+            else if (kind.Contains("audio")) { g.DrawLines(pen, new[] { new Point(15, 26), new Point(23, 26), new Point(34, 16), new Point(34, 48), new Point(23, 38), new Point(15, 38), new Point(15, 26) }); g.DrawArc(pen, 27, 14, 25, 35, -60, 120); }
             else if (kind.Contains("revisar") || kind.Contains("parcial")) { g.DrawPolygon(pen, new[] { new Point(32, 11), new Point(55, 51), new Point(9, 51) }); g.DrawLine(pen, 32, 25, 32, 37); g.DrawEllipse(pen, 31, 43, 2, 2); }
             else { g.DrawRectangle(pen, 10, 13, 44, 30); g.DrawLine(pen, 32, 44, 32, 51); g.DrawLine(pen, 23, 52, 41, 52); }
         }

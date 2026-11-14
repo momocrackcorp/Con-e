@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.6.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.6.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -301,6 +301,9 @@ internal sealed partial class MainForm
                 }
                 using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-" + width + ".png"), ImageFormat.Png); }
             }
+            var realSnapshot=new Snapshot();var realDisks=ReadDiskLayouts(realSnapshot);
+            if(realDisks.Count==0 || !realDisks.Any(d=>d.Partitions.Count>0))throw new InvalidOperationException("La consulta real no leyó particiones: "+string.Join(" | ",realSnapshot.Warnings));
+            File.WriteAllText(Path.Combine(dir,"lectura-real.txt"),"Discos: "+realDisks.Count+" · Particiones: "+realDisks.Sum(d=>d.Partitions.Count)+Environment.NewLine+string.Join(Environment.NewLine,realDisks.Select(d=>d.ReadNote)));
             var testDisk=new DiskLayout {Number=0,Name="SSD de prueba",Size=500UL*1073741824,Style="GPT",Complete=true};
             var part=new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,Letter="C",Type="Datos básicos",FileSystem="NTFS",VolumeSize=200UL*1073741824,Free=50UL*1073741824};
             testDisk.Partitions.Add(part);

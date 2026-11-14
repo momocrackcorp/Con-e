@@ -45,7 +45,7 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.6.0";
+        Text = "Con-E · Diagnóstico y herramientas · v0.6.1";
         BackColor = CanvasColor;
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -70,10 +70,17 @@ internal sealed partial class MainForm : Form
         });
         Controls.Add(tabs); Controls.Add(actions); Controls.Add(BuildHeader()); Controls.Add(status);
         dashboard.Resize += (s, e) => ResizeCards();
+        summary.ShowItemToolTips=true;summary.Resize+=(s,e)=>ResizeSummary();
         RenderDashboard();
         Shown += async (s, e) => { if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) await RefreshData(); };
     }
 
+    void ResizeSummary()
+    {
+        int width=Math.Max(500,summary.ClientSize.Width-SystemInformation.VerticalScrollBarWidth-4);
+        summary.Columns[0].Width=Math.Max((int)(240*DeviceDpi/96f),(int)(width*0.30));
+        summary.Columns[1].Width=Math.Max(280,width-summary.Columns[0].Width);
+    }
     static ListView MakeList(string[] columns)
     {
         var list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, GridLines = true, HideSelection = false };
@@ -94,7 +101,7 @@ internal sealed partial class MainForm : Form
             var data = await Task.Run(() => Collect());
             if (IsDisposed || Disposing) return;
             current = data; diskLayouts.Clear(); diskLayouts.AddRange(data.Disks); RenderDiskMaps();
-            Fill(summary, data.Summary); Fill(drivers, data.Drivers); RenderDashboard(); RenderHardwareBrowser();
+            Fill(summary, data.Summary); ResizeSummary(); Fill(drivers, data.Drivers); RenderDashboard(); RenderHardwareBrowser();
             status.Text = data.Warnings.Count == 0 ? "Lectura completada · " + data.Drivers.Count + " registros de controladores" : "Lectura parcial · " + string.Join(" | ", data.Warnings);
         }
         catch (Exception ex) { status.Text = "No fue posible completar la lectura: " + ex.Message; }
@@ -103,7 +110,7 @@ internal sealed partial class MainForm : Form
     static void Fill(ListView list, List<string[]> rows)
     {
         list.BeginUpdate();
-        try { list.Items.Clear(); foreach (var row in rows) list.Items.Add(new ListViewItem(row)); }
+        try { list.Items.Clear(); foreach (var row in rows) list.Items.Add(new ListViewItem(row) { ToolTipText=string.Join(Environment.NewLine,row) }); }
         finally { list.EndUpdate(); }
     }
     static string Value(ManagementBaseObject obj, string key)
@@ -192,7 +199,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.6.0\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.6.1\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

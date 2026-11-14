@@ -13,6 +13,7 @@ internal sealed class DiskLayout
     public string Name, Style;
     public ulong Size;
     public bool Complete;
+    public string ReadNote="";
     public readonly List<PartitionLayout> Partitions = new List<PartitionLayout>();
     public List<PartitionLayout> Segments()
     {
@@ -49,7 +50,7 @@ internal sealed partial class MainForm
         diskMaps.Resize+=(s,e)=> { foreach(Control group in diskMaps.Controls) group.Width=Math.Max(240,diskMaps.ClientSize.Width-diskMaps.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8); };
         return panel;
     }
-    static string Space(ulong bytes) { return (bytes/1073741824d).ToString("0.##")+" GiB"; }
+    static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
     {
         partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+Environment.NewLine+
@@ -71,18 +72,18 @@ internal sealed partial class MainForm
             foreach(var disk in diskLayouts)
             {
                 var group=new Panel { Width=Math.Max(240,diskMaps.ClientSize.Width-60), Height=260, BackColor=Color.White, Margin=new Padding(0,0,0,16), Padding=new Padding(12) };
-                var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style, Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
+                var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var segments=disk.Segments();
                 var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Top, Height=72, Margin=new Padding(0,8,0,8) };
                 var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.GridLines=false;list.ShowItemToolTips=true;
-                list.Columns[0].Width=350;list.Columns[1].Width=120;list.Columns[2].Width=120;
+                list.Columns[0].Width=350;list.Columns[1].Width=(int)(115*DeviceDpi/96f);list.Columns[2].Width=(int)(115*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
                     var item=new ListViewItem(new[]{p.Title,Space(p.Size),p.Free.HasValue?Space(p.Free.Value):"No disponible"}) {Tag=p,ToolTipText=p.Title};list.Items.Add(item);
                 }
                 map.Selected+=(p)=> { SelectPartition(disk,p); foreach(ListViewItem row in list.Items)row.Selected=ReferenceEquals(row.Tag,p); };
                 list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;var p=(PartitionLayout)list.SelectedItems[0].Tag;map.Selection=p;map.Invalidate();SelectPartition(disk,p);};
-                list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(140,width-240);};
+                list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(180,width-list.Columns[1].Width-list.Columns[2].Width);};
                 group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(200,group.Width-30),0);
                 group.Controls.Add(list);group.Controls.Add(map);group.Controls.Add(heading);diskMaps.Controls.Add(group);
             }
@@ -97,16 +98,49 @@ internal sealed partial class MainForm
             using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle FROM MSFT_Disk"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             { result.Add(new DiskLayout { Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
-            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,Type FROM MSFT_Partition"))
+            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,MbrType FROM MSFT_Partition"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             {
                 var disk=result.FirstOrDefault(d=>d.Number==Convert.ToUInt32(row["DiskNumber"]));if(disk==null)continue;
                 string letter=Convert.ToString(row["DriveLetter"]).Trim('\0',' ');
-                disk.Partitions.Add(new PartitionLayout { Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,Type=PartitionType(Value(row,"GptType"),Value(row,"Type")) });
+                disk.Partitions.Add(new PartitionLayout { Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,Type=PartitionType(Value(row,"GptType"),Value(row,"MbrType")) });
             }
-            foreach(var disk in result)disk.Complete=true;
+            foreach(var disk in result) { disk.Complete=true; disk.ReadNote="Fuente: Storage WMI · selecciona un bloque o una fila"; }
         }
         catch(Exception ex) {data.Warnings.Add("Mapa de discos: "+ex.Message);}
+        if(result.Count==0 || result.Any(d=>!d.Complete || (d.Partitions.Count==0 && d.Style!="RAW / no determinado")))
+        {
+            try
+            {
+                using(var query=new ManagementObjectSearcher("SELECT Index,Model,Size FROM Win32_DiskDrive"))
+                using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
+                {
+                    uint number=Convert.ToUInt32(row["Index"]);if(result.Any(d=>d.Number==number))continue;
+                    result.Add(new DiskLayout {Number=number,Name=Value(row,"Model"),Size=Convert.ToUInt64(row["Size"]),Style="Estilo no disponible"});
+                }
+                var fallback=new Dictionary<uint,List<PartitionLayout>>();
+                using(var query=new ManagementObjectSearcher("SELECT DiskIndex,Index,StartingOffset,Size,Type,DeviceID FROM Win32_DiskPartition"))
+                using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
+                {
+                    uint number=Convert.ToUInt32(row["DiskIndex"]);List<PartitionLayout> parts;
+                    if(!fallback.TryGetValue(number,out parts)){parts=new List<PartitionLayout>();fallback[number]=parts;}
+                    var part=new PartitionLayout {Number=Convert.ToUInt32(row["Index"])+1,Offset=Convert.ToUInt64(row["StartingOffset"]),Size=Convert.ToUInt64(row["Size"]),Type=Value(row,"Type")};
+                    try {using(var volumes=row.GetRelated("Win32_LogicalDisk"))foreach(ManagementObject volume in volumes)using(volume)part.Letter=Value(volume,"DeviceID").TrimEnd(':');}catch{}
+                    parts.Add(part);
+                }
+                foreach(var disk in result.Where(d=>!d.Complete || (d.Partitions.Count==0 && d.Style!="RAW / no determinado")))
+                {
+                    List<PartitionLayout> parts;
+                    if(fallback.TryGetValue(disk.Number,out parts) && parts.Count>0)
+                    {
+                        disk.Partitions.Clear();disk.Partitions.AddRange(parts);disk.Complete=false;
+                        disk.ReadNote="Fuente alternativa Win32: intervalos sin asignar no inferidos; selecciona una partición.";
+                    }
+                    else disk.ReadNote="No se pudieron enumerar las particiones. Consulta las incidencias; puede requerir permisos adicionales.";
+                }
+            }
+            catch(Exception ex){data.Warnings.Add("Lectura alternativa de particiones: "+ex.Message);}
+        }
         foreach(var disk in result)foreach(var p in disk.Partitions.Where(p=>p.Letter.Length==1&&char.IsLetter(p.Letter[0])))
         {
             try
@@ -121,7 +155,7 @@ internal sealed partial class MainForm
     static string PartitionType(string guid,string type)
     {
         switch(guid.Trim('{','}').ToUpperInvariant())
-        {case "C12A7328-F81F-11D2-BA4B-00A0C93EC93B":return "EFI";case "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC":return "Recuperación";case "E3C9E316-0B5C-4DB8-817D-F92DF00215AE":return "Reservada MSR";case "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7":return "Datos básicos";default:return type+" · "+guid;}
+        {case "C12A7328-F81F-11D2-BA4B-00A0C93EC93B":return "EFI";case "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC":return "Recuperación";case "E3C9E316-0B5C-4DB8-817D-F92DF00215AE":return "Reservada MSR";case "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7":return "Datos básicos";default:return guid=="No disponible"||guid.Length==0?"Tipo MBR "+type:"Tipo GPT "+guid;}
     }
 }
 internal sealed class PartitionStrip : Control

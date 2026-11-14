@@ -50,13 +50,14 @@ internal sealed partial class MainForm : Form
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
-        tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9) };
+        tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
         var home = new TabPage("Mi equipo") { BackColor = CanvasColor }; home.Controls.Add(dashboard); tabs.TabPages.Add(home);
+        disksPage=new TabPage("Mapa de discos");disksPage.Controls.Add(BuildDiskMap());tabs.TabPages.Add(disksPage);
         var first = new TabPage("Detalles técnicos"); first.Controls.Add(summary);
         driverPage = new TabPage("Hardware y controladores"); driverPage.Controls.Add(BuildHardwareBrowser()); tabs.TabPages.Add(driverPage);
         var toolsPage = new TabPage("Herramientas") { BackColor = CanvasColor }; toolsPage.Controls.Add(BuildTools()); tabs.TabPages.Add(toolsPage);
         tabs.TabPages.Add(first);
-        disksPage=new TabPage("Mapa de discos");disksPage.Controls.Add(BuildDiskMap());tabs.TabPages.Insert(1,disksPage);
+
         AddButton("Explicaciones", ToggleHelp);
         AddButton("Actualizar", async () => await RefreshData());
         AddButton("Guardar informe", Export);

@@ -306,7 +306,9 @@ internal sealed partial class MainForm
             testDisk.Partitions.Add(part);
             if(testDisk.Segments().Count!=3)throw new InvalidOperationException("Intervalos no calculados");
             testDisk.Complete=false;if(testDisk.Segments().Count!=1)throw new InvalidOperationException("Se inventaron intervalos con lectura incompleta");testDisk.Complete=true;
-            form.diskLayouts.Add(testDisk);form.RenderDiskMaps();form.tabs.SelectedTab=form.disksPage;Application.DoEvents();form.SelectPartition(testDisk,part);
+            form.diskLayouts.Add(testDisk);form.RenderDiskMaps();form.tabs.SelectedTab=form.disksPage;Application.DoEvents();
+            if(!form.tabs.TabPages.Contains(form.disksPage) || !form.diskMaps.Visible)throw new InvalidOperationException("Pestaña de discos ausente");
+            form.SelectPartition(testDisk,part);
             if(!form.partitionInfo.Text.Contains("50"))throw new InvalidOperationException("Selección de partición incorrecta");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-discos.png"),ImageFormat.Png);}
             form.tabs.SelectedIndex=0;

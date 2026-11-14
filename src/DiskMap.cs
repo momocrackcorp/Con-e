@@ -89,7 +89,7 @@ internal sealed partial class MainForm
                 int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;
                 int listHeight=lineHeight*(Math.Max(3,Math.Min(8,rowCount))+2)+SystemInformation.HorizontalScrollBarHeight+12;
                 group.RowStyles.Add(new RowStyle(SizeType.Absolute,listHeight));
-                list.MinimumSize=new Size(0,listHeight);
+                list.Margin=Padding.Empty;
                 map.Selected+=(p)=> { SelectPartition(disk,p); foreach(ListViewItem row in list.Items)row.Selected=ReferenceEquals(row.Tag,p); };
                 list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;var p=(PartitionLayout)list.SelectedItems[0].Tag;map.Selection=p;map.Invalidate();SelectPartition(disk,p);};
                 list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(180,width-list.Columns[1].Width-list.Columns[2].Width);};
@@ -192,4 +192,3 @@ internal sealed class PartitionStrip : Control
     protected override void OnKeyDown(KeyEventArgs e){base.OnKeyDown(e);if(segments.Count==0)return;int index=segments.IndexOf(Selection);if(e.KeyCode==Keys.Left||e.KeyCode==Keys.Right){index=Math.Max(0,Math.Min(segments.Count-1,index+(e.KeyCode==Keys.Left?-1:1)));Choose(segments[index]);e.Handled=true;}}
     void Choose(PartitionLayout p){Selection=p;Invalidate();if(Selected!=null)Selected(p);}
 }
-

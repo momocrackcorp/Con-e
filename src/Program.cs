@@ -16,6 +16,7 @@ internal static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+        if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { MainForm.SmokeTest(); return; }
         Application.Run(new MainForm());
     }
 }
@@ -26,9 +27,13 @@ internal sealed class Snapshot
     public readonly List<string[]> Drivers = new List<string[]>();
     public readonly List<string> Warnings = new List<string>();
     public string Manufacturer = "", Model = "";
+    public double? RamTotalGiB, RamAvailableGiB;
+    public readonly List<VolumeInfo> Volumes = new List<VolumeInfo>();
+    public bool PnpReadComplete;
+    public readonly HashSet<string> ProblemDevices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 }
 
-internal sealed class MainForm : Form
+internal sealed partial class MainForm : Form
 {
     readonly ListView summary = MakeList(new[] { "Propiedad", "Valor" });
     readonly ListView drivers = MakeList(new[] { "Dispositivo", "Proveedor", "Versión", "Fecha", "Estado PnP", "INF" });
@@ -38,13 +43,18 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.1.0";
-        Size = new Size(980, 680); MinimumSize = new Size(650, 450);
+        Text = "Con-E · Diagnóstico y herramientas · v0.2.0";
+        BackColor = CanvasColor;
+        Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
-        var tabs = new TabControl { Dock = DockStyle.Fill };
-        var first = new TabPage("Mi equipo"); first.Controls.Add(summary); tabs.TabPages.Add(first);
-        var second = new TabPage("Controladores"); second.Controls.Add(drivers); tabs.TabPages.Add(second);
+        tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9) };
+        var home = new TabPage("Mi equipo") { BackColor = CanvasColor }; home.Controls.Add(dashboard); tabs.TabPages.Add(home);
+        var first = new TabPage("Detalles técnicos"); first.Controls.Add(summary);
+        driverPage = new TabPage("Controladores"); driverPage.Controls.Add(drivers); tabs.TabPages.Add(driverPage);
+        var toolsPage = new TabPage("Herramientas") { BackColor = CanvasColor }; toolsPage.Controls.Add(BuildTools()); tabs.TabPages.Add(toolsPage);
+        tabs.TabPages.Add(first);
+        AddButton("Explicaciones", ToggleHelp);
         AddButton("Actualizar", async () => await RefreshData());
         AddButton("Guardar informe", Export);
         AddButton("Buscar fabricante", SearchManufacturer);
@@ -54,8 +64,10 @@ internal sealed class MainForm : Form
             if (Directory.Exists(path)) Open(path);
             else MessageBox.Show("No se encontró la carpeta Tools junto a Con-E.exe.");
         });
-        Controls.Add(tabs); Controls.Add(actions); Controls.Add(status);
-        Shown += async (s, e) => await RefreshData();
+        Controls.Add(tabs); Controls.Add(actions); Controls.Add(BuildHeader()); Controls.Add(status);
+        dashboard.Resize += (s, e) => ResizeCards();
+        RenderDashboard();
+        Shown += async (s, e) => { if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) await RefreshData(); };
     }
 
     static ListView MakeList(string[] columns)
@@ -76,12 +88,13 @@ internal sealed class MainForm : Form
         try
         {
             var data = await Task.Run(() => Collect());
+            if (IsDisposed || Disposing) return;
             current = data;
-            Fill(summary, data.Summary); Fill(drivers, data.Drivers);
+            Fill(summary, data.Summary); Fill(drivers, data.Drivers); RenderDashboard();
             status.Text = data.Warnings.Count == 0 ? "Lectura completada · " + data.Drivers.Count + " registros de controladores" : "Lectura parcial · " + string.Join(" | ", data.Warnings);
         }
         catch (Exception ex) { status.Text = "No fue posible completar la lectura: " + ex.Message; }
-        finally { actions.Enabled = true; }
+        finally { if (!IsDisposed && !Disposing) actions.Enabled = true; }
     }
     static void Fill(ListView list, List<string[]> rows)
     {
@@ -121,12 +134,15 @@ internal sealed class MainForm : Form
         {
             data.Manufacturer = Value(o, "Manufacturer"); data.Model = Value(o, "Model");
             add("Fabricante del equipo", data.Manufacturer); add("Modelo del equipo", data.Model); add("Nombre del equipo", Value(o, "Name"));
-            double bytes; add("Memoria RAM instalada", double.TryParse(Value(o, "TotalPhysicalMemory"), out bytes) ? (bytes / 1073741824d).ToString("0.##") + " GB" : "No disponible");
+            double bytes; add("Memoria RAM instalada", double.TryParse(Value(o, "TotalPhysicalMemory"), out bytes) ? (bytes / 1073741824d).ToString("0.##") + " GiB" : "No disponible");
+            data.RamTotalGiB = double.TryParse(Value(o, "TotalPhysicalMemory"), out bytes) && bytes > 0 ? (double?)(bytes / 1073741824d) : null;
             add("Tipo de sistema", Value(o, "SystemType"));
         });
-        Query(data, "Windows", "SELECT Caption,Version,BuildNumber,OSArchitecture,InstallDate FROM Win32_OperatingSystem", o =>
+        Query(data, "Windows", "SELECT Caption,Version,BuildNumber,OSArchitecture,InstallDate,FreePhysicalMemory FROM Win32_OperatingSystem", o =>
         {
             add("Windows", Value(o, "Caption")); add("Versión / compilación", Value(o, "Version") + " / " + Value(o, "BuildNumber"));
+            double freeKiB; if (double.TryParse(Value(o, "FreePhysicalMemory"), out freeKiB) && freeKiB >= 0) data.RamAvailableGiB = freeKiB / 1048576d;
+            add("RAM disponible al consultar", data.RamAvailableGiB.HasValue ? data.RamAvailableGiB.Value.ToString("0.##") + " GiB" : "No disponible");
             add("Arquitectura de Windows", Value(o, "OSArchitecture")); add("Instalación registrada por Windows", Date(Value(o, "InstallDate")));
         });
         add("Último formateo", "No determinable de forma fiable con estos datos");
@@ -140,18 +156,27 @@ internal sealed class MainForm : Form
         { add("Fabricante de placa base", Value(o, "Manufacturer")); add("Modelo de placa base", Value(o, "Product")); add("Serie de placa base", Value(o, "SerialNumber")); });
         Query(data, "Discos", "SELECT Model,Size FROM Win32_DiskDrive", o =>
         { double bytes; add("Disco físico", Value(o, "Model") + (double.TryParse(Value(o, "Size"), out bytes) ? " · " + (bytes / 1073741824d).ToString("0.##") + " GiB" : "")); });
+        Query(data, "Unidades", "SELECT DeviceID,Size,FreeSpace FROM Win32_LogicalDisk WHERE DriveType=3", o =>
+        { double total, free; if (double.TryParse(Value(o, "Size"), out total) && total > 0 && double.TryParse(Value(o, "FreeSpace"), out free) && free >= 0 && free <= total)
+          { data.Volumes.Add(new VolumeInfo { Name = Value(o, "DeviceID"), TotalGiB = total / 1073741824d, FreeGiB = free / 1073741824d }); add("Unidad " + Value(o, "DeviceID"), (free / 1073741824d).ToString("0.##") + " GiB libres de " + (total / 1073741824d).ToString("0.##") + " GiB"); }
+        });
         var states = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var deviceRows = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        int pnpWarningCount = data.Warnings.Count;
         Query(data, "Estado PnP", "SELECT DeviceID,Name,ConfigManagerErrorCode FROM Win32_PnPEntity", o =>
         {
             var id = Value(o, "DeviceID"); var code = Value(o, "ConfigManagerErrorCode");
             states[id] = code == "0" ? "Sin error PnP" : "Código PnP: " + code;
-            if (code != "0") data.Drivers.Add(new[] { Value(o, "Name"), "No consultado", "No disponible", "No disponible", states[id], "Ver Administrador de dispositivos" });
+            int errorCode;
+            if (int.TryParse(code, out errorCode) && errorCode != 0) { data.ProblemDevices.Add(id); deviceRows[id] = new[] { Value(o, "Name"), "No disponible", "No disponible", "No disponible", states[id], "Ver Administrador de dispositivos" }; }
         });
+        data.PnpReadComplete = data.Warnings.Count == pnpWarningCount;
         Query(data, "Controladores", "SELECT DeviceID,DeviceName,DriverProviderName,DriverVersion,DriverDate,InfName FROM Win32_PnPSignedDriver", o =>
         {
             string state; states.TryGetValue(Value(o, "DeviceID"), out state);
-            data.Drivers.Add(new[] { Value(o, "DeviceName"), Value(o, "DriverProviderName"), Value(o, "DriverVersion"), Date(Value(o, "DriverDate")), state ?? "No disponible", Value(o, "InfName") });
+            deviceRows[Value(o, "DeviceID")] = new[] { Value(o, "DeviceName"), Value(o, "DriverProviderName"), Value(o, "DriverVersion"), Date(Value(o, "DriverDate")), state ?? "No disponible", Value(o, "InfName") };
         });
+        data.Drivers.AddRange(deviceRows.OrderByDescending(pair => data.ProblemDevices.Contains(pair.Key)).ThenBy(pair => pair.Value[0]).Select(pair => pair.Value));
         return data;
     }
     void Export()
@@ -160,7 +185,7 @@ internal sealed class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.1.0\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.2.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

@@ -1,13 +1,17 @@
-# Con-E v0.1.0 — primera prueba
+# Con-E v0.2.0 — interfaz gráfica
 
 Launcher portátil de diagnóstico para Windows 10 y 11. Interfaz nativa Windows Forms, sin navegador integrado ni paquetes externos en ejecución. Usa .NET Framework 4.8: debe estar disponible en el equipo; esta entrega no incluye ni instala el framework. Windows XP es referencia visual, no plataforma compatible.
 
 ## Incluido
 
-- Resumen de equipo, CPU, RAM y discos físicos.
+- Pantalla con tarjetas de equipo, procesador, RAM, almacenamiento, Windows, BIOS y controladores.
+- Barras de RAM y espacio ocupado por unidad, con datos de la última consulta (no monitorización continua).
+- Botón Explicaciones para mostrar u ocultar ayuda sencilla; detalles técnicos y series en diálogos separados.
+- Botón para copiar la serie del equipo.
+- Diseño adaptable con una, dos o tres columnas según el ancho de la ventana.
 - Versión de Windows y fecha de instalación registrada.
 - Fabricante, versión, fecha y serie informada por BIOS; identidad del equipo y placa base por separado.
-- Inventario de controladores y códigos de error PnP. Los dispositivos con incidencias aparecen además como filas de advertencia, aunque no tengan controlador firmado. Puede haber una fila de advertencia y otra de inventario para el mismo dispositivo.
+- Inventario de controladores y códigos de error PnP. Los dispositivos con incidencias aparecen primero, aunque no tengan controlador firmado; se agrupan por su identificador PnP para evitar duplicados. Una lectura PnP incompleta se indica expresamente.
 - Informe TXT guardado únicamente cuando el usuario lo solicita.
 - Carpeta Tools para herramientas portátiles externas; se abre en el Explorador.
 - Botón de búsqueda web con fabricante y modelo. Esta versión abre el navegador: NO obtiene todavía una reseña automática ni verifica coincidencias con fuentes oficiales.
@@ -16,11 +20,11 @@ El último formateo no puede establecerse de forma fiable a partir de la fecha d
 
 ## Compilación con GitHub
 
-El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualmente desde Actions. Descargar el artefacto `Con-E-v0.1.0-portable`, extraer todo su contenido en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualmente desde Actions. Descargar el artefacto `Con-E-v0.2.0-portable`, extraer todo su contenido en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
 
-## Pruebas pendientes en Windows
+## Validación y pruebas pendientes
 
-1. Compilación y generación del artefacto: comprobadas en GitHub Actions.
+1. GitHub Actions compila y ejecuta una prueba de interfaz con datos simulados: anchos de 1100, 760 y 650 px, explicaciones, navegación, datos ausentes y una captura con escala doble. Capturas y resultado en el artefacto separado `Con-E-interfaz-pruebas`; no se incluyen en el paquete portátil.
 2. Abrir desde USB sin permisos de administrador y comparar modelo, serie, RAM y BIOS con Información del sistema (msinfo32).
 3. Comparar controladores y códigos PnP con Administrador de dispositivos.
 4. Desconectar internet: la lectura local y el informe deben seguir disponibles.
@@ -31,4 +35,4 @@ El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualm
 
 ## Estado de entrega
 
-Compilación Windows correcta en GitHub Actions: [primera compilación](https://github.com/momocrackcorp/Con-e/actions/runs/43550847741). Paquete portátil generado. Ejecución interactiva y prueba desde USB pendientes. No se incluyen herramientas de terceros. La reseña oficial automática del fabricante y un catálogo de accesos del launcher quedan para una siguiente versión.
+Versión gráfica v0.2.0 preparada para compilación y prueba automatizada en GitHub Actions. La prueba automatizada usa datos simulados y no sustituye la prueba desde USB con datos de un equipo real. No se incluyen herramientas de terceros. La reseña oficial automática del fabricante y un catálogo de accesos individuales del launcher quedan para una siguiente versión.

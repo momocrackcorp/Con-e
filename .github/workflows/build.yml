@@ -20,8 +20,9 @@ jobs:
         run: |
           $p = Start-Process output/Con-E.exe -ArgumentList '--smoke-test' -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'La prueba de interfaz excedió 120 segundos' }
-          if ($p.ExitCode -ne 0) { throw 'Falló la prueba de interfaz' }
+          if ($p.ExitCode -ne 0) { Get-Content output/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló la prueba de interfaz' }
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Con-E-interfaz-pruebas
           path: output/qa/

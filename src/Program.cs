@@ -16,7 +16,7 @@ internal static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { MainForm.SmokeTest(); return; }
+        if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { try { MainForm.SmokeTest(); } catch(Exception ex) { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa")); File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","error.txt"),ex.ToString()); Environment.ExitCode=1; } return; }
         Application.Run(new MainForm());
     }
 }

@@ -74,43 +74,110 @@ internal sealed partial class MainForm
         disk=reload();if(!disk.Partitions.Any(p=>p.Size==oldSize))throw new InvalidOperationException("Tamaño ampliado incorrecto");
         System.IO.File.WriteAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","resize-ok.txt"),"OK: disco virtual GPT NTFS, reducción a 128 MiB, ampliación al tamaño inicial y conservación del archivo.");
     }
-    async void EditPartition(DiskLayout disk,PartitionLayout part)
+    readonly System.Collections.Generic.List<PendingResize> pendingResizes=new System.Collections.Generic.List<PendingResize>();
+    readonly FlowLayoutPanel inlineEditor=new FlowLayoutPanel {Dock=DockStyle.Bottom,AutoSize=true,WrapContents=true,Padding=new Padding(10),Visible=false,BackColor=Color.White};
+    readonly Label editLimits=new Label {AutoSize=true,MaximumSize=new Size(500,0)};
+    readonly NumericUpDown editSize=new NumericUpDown {Width=150,ThousandsSeparator=true};
+    readonly ResizePreview resizePreview=new ResizePreview {Width=300,Height=66};
+    readonly ListBox pendingList=new ListBox {Width=420,Height=65,HorizontalScrollbar=true};
+    readonly Button applyPending=new Button {Text="Aplicar (0)",AutoSize=true,Enabled=false};
+    readonly Button discardPending=new Button {Text="Descartar",AutoSize=true,Enabled=false};
+    DiskLayout editingDisk;PartitionLayout editingPartition;
+    bool previewUpdating,applyingChanges;
+    Control BuildInlineEditor()
     {
-        if(!CanResize(disk,part)){partitionInfo.Text="Modificar tamaño sólo está habilitado para particiones GPT de datos básicos, NTFS y con letra. No se modifica EFI, MSR ni recuperación.";return;}
-        if(!IsAdmin())
-        {
-            if(MessageBox.Show(this,"Para modificar particiones, Con-E debe ejecutarse como administrador. ¿Reabrir con permisos? Después deberás seleccionar de nuevo la partición.","Permisos",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
-            try{Process.Start(new ProcessStartInfo(Application.ExecutablePath){UseShellExecute=true,Verb="runas"});Close();}catch(Exception ex){partitionInfo.Text="No se inició con permisos: "+ex.Message;}return;
-        }
+        inlineEditor.Controls.Add(editLimits);inlineEditor.Controls.Add(resizePreview);
+        inlineEditor.Controls.Add(new Label {Text="Tamaño final (MiB)",AutoSize=true,Margin=new Padding(5,7,3,3)});inlineEditor.Controls.Add(editSize);
+        var stage=new Button {Text="Añadir cambio",AutoSize=true};inlineEditor.Controls.Add(stage);inlineEditor.Controls.Add(pendingList);
+        editSize.ValueChanged+=(s,e)=> {if(previewUpdating)return;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();};
+        resizePreview.Changed+=(bytes)=>{previewUpdating=true;editSize.Value=Math.Max(editSize.Minimum,Math.Min(editSize.Maximum,decimal.Floor(bytes/1048576m)));previewUpdating=false;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();};
+        stage.Click+=(s,e)=>{if(editingDisk!=null&&editingPartition!=null)StageResize(editingDisk,editingPartition,(ulong)editSize.Value*1048576UL);};
+        applyPending.Click+=async(s,e)=>await ApplyPending();
+        discardPending.Click+=(s,e)=>{pendingResizes.Clear();UpdatePending();};
+        return inlineEditor;
+    }
+    void StageResize(DiskLayout disk,PartitionLayout part,ulong bytes)
+    {
+        pendingResizes.RemoveAll(p=>p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        if(bytes!=part.Size)pendingResizes.Add(new PendingResize {Disk=disk,Part=part,Bytes=bytes});
+        UpdatePending();
+    }
+    void UpdatePending()
+    {
+        pendingList.Items.Clear();foreach(var change in pendingResizes)pendingList.Items.Add(change.Description);
+        applyPending.Text="Aplicar ("+pendingResizes.Count+")";applyPending.Enabled=pendingResizes.Count>0&&!applyingChanges;
+        discardPending.Enabled=pendingResizes.Count>0&&!applyingChanges;
+        status.Text=pendingResizes.Count==0?"Sin operaciones pendientes.":pendingResizes.Count+" cambio(s) preparado(s). El disco todavía no se modifica.";
+    }
+    async System.Threading.Tasks.Task ApplyPending()
+    {
+        if(applyingChanges||pendingResizes.Count==0)return;
+        string summary=string.Join(Environment.NewLine,pendingResizes.Select(p=>p.Description));
+        if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+"Se modificarán estas particiones. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
+        applyingChanges=true;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
+        var closeGuard=new FormClosingEventHandler((s,e)=>e.Cancel=true);FormClosing+=closeGuard;
         try
         {
-            partitionInfo.Text="Consultando los límites de Windows…";
-            var bounds=await System.Threading.Tasks.Task.Run(()=>ResizeBounds(disk,part));if(IsDisposed)return;
-            using(var dialog=new Form {Text="Modificar tamaño · "+part.Letter+":",Size=new Size(620,460),MinimumSize=new Size(500,400),StartPosition=FormStartPosition.CenterParent,Font=Font,AutoScaleMode=AutoScaleMode.Dpi})
+            // Validate all planned targets before performing the first write.
+            foreach(var change in pendingResizes){var bounds=await System.Threading.Tasks.Task.Run(()=>ResizeBounds(change.Disk,change.Part));if(change.Bytes<bounds[0]||change.Bytes>bounds[1])throw new InvalidOperationException("Cambió el espacio permitido. Actualiza y prepara de nuevo los cambios.");}
+            while(pendingResizes.Count>0)
             {
-                var content=new FlowLayoutPanel {Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true,Padding=new Padding(18)};
-                var info=new Label {AutoSize=true,MaximumSize=new Size(530,0),Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+"Partición "+part.Number+" · "+part.Letter+": · NTFS"+Environment.NewLine+"Actual: "+Space(part.Size)+". Permitido: "+Space(bounds[0])+" a "+Space(bounds[1])+Environment.NewLine+"El tamaño final incluye el espacio ocupado. Respaldar los datos antes de continuar. No se mueven otras particiones."};content.Controls.Add(info);
-                content.Controls.Add(new Label {Text="Tamaño final en MiB",AutoSize=true});
-                decimal min=decimal.Ceiling(bounds[0]/1048576m),max=decimal.Floor(bounds[1]/1048576m);
-                if(min>max)throw new InvalidOperationException("No hay un tamaño válido en MiB.");
-                var size=new NumericUpDown {Minimum=min,Maximum=max,Value=Math.Max(min,Math.Min(max,decimal.Floor(part.Size/1048576m))),Width=220,ThousandsSeparator=true};content.Controls.Add(size);
-                content.Controls.Add(new Label {Text="Escribe APLICAR para confirmar el tamaño final indicado.",AutoSize=true,MaximumSize=new Size(520,0)});
-                var confirmation=new TextBox {Width=250};content.Controls.Add(confirmation);
-                var apply=new Button {Text="Aplicar cambio de tamaño",AutoSize=true,Enabled=false};content.Controls.Add(apply);
-                var outcome=new Label {AutoSize=true,MaximumSize=new Size(520,0)};content.Controls.Add(outcome);
-                confirmation.TextChanged+=(s,e)=>apply.Enabled=confirmation.Text=="APLICAR";
-                apply.Click+=async(s,e)=>
-                {
-                    ulong target=checked((ulong)size.Value*1048576UL);
-                    if(MessageBox.Show(dialog,"Se modificará "+part.Letter+": en el disco "+disk.Number+" de "+Space(part.Size)+" a "+Space(target)+". ¿Aplicar ahora?","Confirmar cambio",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
-                    apply.Enabled=false;confirmation.Enabled=false;size.Enabled=false;dialog.ControlBox=false;outcome.Text="Aplicando cambio… No desconectes el disco.";
-                    try{await System.Threading.Tasks.Task.Run(()=>ApplyResize(disk,part,target));dialog.DialogResult=DialogResult.OK;dialog.Close();}
-                    catch(Exception ex){outcome.Text=ex.Message;dialog.ControlBox=true;}
-                };
-                dialog.Controls.Add(content);dialog.ShowDialog(this);
+                var change=pendingResizes[0];partitionInfo.Text="Aplicando: "+change.Description+Environment.NewLine+"No desconectes el disco.";
+                await System.Threading.Tasks.Task.Run(()=>ApplyResize(change.Disk,change.Part,change.Bytes));pendingResizes.RemoveAt(0);
             }
-            await RefreshData();
+            partitionInfo.Text="Operaciones completadas.";
         }
-        catch(Exception ex){partitionInfo.Text="No se pudo preparar la modificación: "+ex.Message;}
+        catch(Exception ex){MessageBox.Show(this,"La ejecución se detuvo: "+ex.Message+Environment.NewLine+"Las operaciones terminadas no se deshacen automáticamente. Se actualizará el mapa.","Resultado",MessageBoxButtons.OK,MessageBoxIcon.Information);}
+        finally
+        {
+            FormClosing-=closeGuard;pendingResizes.Clear();applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;inlineEditor.Visible=false;UpdatePending();await RefreshData();
+        }
     }
+    async void EditPartition(DiskLayout disk,PartitionLayout part)
+    {
+        if(!CanResize(disk,part)){partitionInfo.Text="Selecciona una partición GPT NTFS de datos básicos con letra.";return;}
+        if(!IsAdmin())
+        {try{Process.Start(new ProcessStartInfo(Application.ExecutablePath){UseShellExecute=true,Verb="runas"});Close();}catch(Exception ex){partitionInfo.Text="No se habilitó la edición: "+ex.Message;}return;}
+        try
+        {
+            partitionInfo.Text="Consultando límites…";var bounds=await System.Threading.Tasks.Task.Run(()=>ResizeBounds(disk,part));if(IsDisposed)return;
+            ConfigureEditor(disk,part,bounds[0],bounds[1]);
+        }
+        catch(Exception ex){partitionInfo.Text="No se pudo preparar el tamaño: "+ex.Message;}
+    }
+    void ConfigureEditor(DiskLayout disk,PartitionLayout part,ulong minimum,ulong maximum)
+    {
+        decimal min=decimal.Ceiling(minimum/1048576m),max=decimal.Floor(maximum/1048576m);if(min>max)throw new InvalidOperationException("Sin intervalo válido.");
+        editingDisk=disk;editingPartition=part;previewUpdating=true;
+        // Reset the control range before setting a different partition's limits.
+        editSize.Minimum=0;editSize.Maximum=decimal.MaxValue;editSize.Value=0;editSize.Maximum=max;editSize.Minimum=min;
+        var queued=pendingResizes.FirstOrDefault(p=>p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        editSize.Value=Math.Max(min,Math.Min(max,decimal.Floor((queued==null?part.Size:queued.Bytes)/1048576m)));
+        previewUpdating=false;
+        resizePreview.Minimum=(ulong)min*1048576UL;resizePreview.Maximum=(ulong)max*1048576UL;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();
+        editLimits.Text="Disco "+disk.Number+" · "+part.Letter+": · actual "+Space(part.Size)+Environment.NewLine+"Permitido: "+Space(minimum)+" a "+Space(maximum)+". Arrastra el borde derecho.";
+        inlineEditor.Visible=true;UpdatePending();
+    }
+}
+internal sealed class PendingResize
+{
+    public DiskLayout Disk;public PartitionLayout Part;public ulong Bytes;
+    public string Description {get{return "Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":): "+(Part.Size/1073741824d).ToString("0.##")+" → "+(Bytes/1073741824d).ToString("0.##")+" GiB";}}
+}
+internal sealed class ResizePreview : Control
+{
+    public ulong Minimum,Maximum,Target;public event Action<ulong> Changed;bool dragging;
+    public ResizePreview(){SetStyle(ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint|ControlStyles.Selectable,true);TabStop=true;AccessibleName="Vista previa del tamaño de partición. También se puede editar con el campo numérico.";}
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);e.Graphics.Clear(Color.White);var track=new Rectangle(4,8,Math.Max(1,Width-12),Height-22);
+        using(var brush=new SolidBrush(Color.FromArgb(224,230,239)))e.Graphics.FillRectangle(brush,track);
+        int width=Maximum==0?0:(int)(Target/(double)Maximum*track.Width);using(var brush=new SolidBrush(Color.FromArgb(70,121,201)))e.Graphics.FillRectangle(brush,track.X,track.Y,width,track.Height);
+        using(var pen=new Pen(Color.FromArgb(25,45,75),5))e.Graphics.DrawLine(pen,track.X+width,track.Y,track.X+width,track.Bottom);
+        TextRenderer.DrawText(e.Graphics,(Target/1073741824d).ToString("0.##")+" GiB (vista previa)",Font,track,Color.FromArgb(20,35,55),TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+    }
+    protected override void OnMouseDown(MouseEventArgs e){base.OnMouseDown(e);if(e.Button!=MouseButtons.Left)return;dragging=true;Capture=true;Adjust(e.X);}
+    protected override void OnMouseMove(MouseEventArgs e){base.OnMouseMove(e);if(dragging)Adjust(e.X);}
+    protected override void OnMouseUp(MouseEventArgs e){base.OnMouseUp(e);dragging=false;Capture=false;}
+    void Adjust(int x){if(Maximum==0)return;double ratio=Math.Max(0,Math.Min(1,(x-4d)/Math.Max(1,Width-12)));ulong bytes=Math.Max(Minimum,Math.Min(Maximum,(ulong)(ratio*Maximum)));if(Changed!=null)Changed(bytes);}
 }

@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.7.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.8.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -325,6 +325,16 @@ internal sealed partial class MainForm
             if(!form.partitionInfo.Text.Contains("Intervalo no particionado"))throw new InvalidOperationException("Selección de fila no actualiza detalles");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-texto-200.png"),ImageFormat.Png);}
             form.Font=originalFont;form.RenderDiskMaps();Application.DoEvents();
+            form.Width=1100;form.Font=originalFont;form.RenderDiskMaps();Application.DoEvents();
+            testDisk.UniqueId="SIMULATED";
+            form.ConfigureEditor(testDisk,part,100UL*1048576,250UL*1073741824);
+            form.editSize.Value=150*1024;
+            var stage=form.inlineEditor.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio");stage.PerformClick();Application.DoEvents();
+            if(form.pendingResizes.Count!=1||!form.applyPending.Enabled||part.Size!=200UL*1073741824)throw new InvalidOperationException("Vista previa modificó el modelo o no generó operación pendiente");
+            form.editSize.Value=160*1024;stage.PerformClick();Application.DoEvents();
+            if(form.pendingResizes.Count!=1||form.pendingResizes[0].Bytes!=160UL*1073741824)throw new InvalidOperationException("Se duplicó una operación para la misma partición");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"editor-visual.png"),ImageFormat.Png);}
+            form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||form.applyPending.Enabled)throw new InvalidOperationException("Descartar no limpia operaciones");form.inlineEditor.Visible=false;
             form.tabs.SelectedIndex=0;
             form.ToggleHelp(); Application.DoEvents();
             if (form.helpLabels.Any(l => !l.Visible)) throw new InvalidOperationException("No se muestran las explicaciones");

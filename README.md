@@ -98,10 +98,19 @@ El mapa y la lista utilizan un panel de filas con altura calculada a partir de l
 Se añade una prueba de fuente de 20 puntos que regenera el mapa, exige altura útil para filas, comprueba límites y selecciona un intervalo mediante la lista. No equivale a una prueba en todos los monitores DPI reales.
 
 
-## Edición v0.7.0
+## Edición v0.8.0
 
 Botón Reducir / ampliar partición para GPT de datos básicos con letra y formato NTFS, leído por Storage WMI con identidad de disco. Consulta GetSupportedSize y aplica Resize mediante WMI. Requiere administrador; puede reabrirse mediante UAC y no ejecuta automáticamente ninguna operación al elevar. Muestra tamaño final en MiB, exige escribir APLICAR y muestra confirmación de destino/tamaño. Revalida identidad de disco, tamaño, número y offset de partición antes de aplicar. Reconsulta límites inmediatamente antes del cambio y refresca el mapa al terminar.
 
 No admite crear, formatear, eliminar, mover, convertir ni modificar EFI/MSR/recuperación. No puede ampliar a través de una partición intermedia. Windows puede rechazar el cambio por cifrado, archivos inmovibles o estado del volumen; un respaldo previo sigue siendo necesario. No hay promesa de ausencia de pérdida de datos.
 
 CI incorpora una prueba sobre VHD temporal propio: crea GPT y NTFS, reduce de 180 a 128 MiB, amplía a tamaño inicial y comprueba contenido de un archivo, luego desmonta el VHD. No usa discos del usuario. La consulta original de sólo lectura ahora tiene esta operación de modificación explícita.
+
+
+## Flujo visual v0.8.0
+
+Ajustar tamaño abre el editor dentro de la pantalla, sin diálogos de edición. El tamaño se cambia arrastrando el borde derecho de la vista previa o con el campo MiB. Añadir cambio prepara una operación; Aplicar muestra una única confirmación con el resumen de destinos y tamaños. Descartar vacía la cola sin escribir en disco. Se eliminó la exigencia de escribir APLICAR y la segunda confirmación por partición. UAC se solicita únicamente si es necesario reabrir la sesión como administrador. Esa reapertura requiere volver a seleccionar la partición.
+
+La vista previa representa el tamaño de la partición editada, no una simulación completa de movimiento entre particiones. Sólo se implementa redimensionar GPT NTFS con las restricciones de Windows. Crear, borrar, formatear y mover siguen pendientes; no equivale a todas las operaciones de GParted. La cola permite una operación por partición, actualizable antes de aplicar. Se validan todos los tamaños antes de la primera escritura y cada destino se revalida inmediatamente antes de su cambio. Una ejecución interrumpida puede dejar operaciones ya completadas: no hay reversión automática. Actualizar datos descarta la cola y cierra el editor para no conservar referencias antiguas.
+
+Las pruebas añaden preparación, actualización y descarte de operaciones sin tocar un disco; se conserva el ensayo real de reducción y ampliación en VHD desechable.

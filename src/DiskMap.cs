@@ -44,16 +44,16 @@ internal sealed partial class MainForm
     readonly TextBox partitionInfo = new TextBox { Dock=DockStyle.Bottom, Multiline=true, ReadOnly=true, Height=135, ScrollBars=ScrollBars.Vertical, BackColor=Color.White, BorderStyle=BorderStyle.FixedSingle };
     readonly List<DiskLayout> diskLayouts = new List<DiskLayout>();
     TabPage disksPage;
-    readonly Button resizePartition=new Button {Text="Reducir / ampliar partición…",AutoSize=true,Enabled=false};
+    readonly Button resizePartition=new Button {Text="Ajustar tamaño",AutoSize=true,Enabled=false};
     DiskLayout selectedEditDisk; PartitionLayout selectedEditPartition;
     Control BuildDiskMap()
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        toolbar.Controls.Add(resizePartition);
+        toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
         toolbar.Controls.Add(new Label {Text="Modificar tamaño de particiones GPT NTFS. Requiere administrador.",AutoSize=true,Margin=new Padding(8)});
         resizePartition.Click+=(s,e)=>{if(selectedEditDisk!=null&&selectedEditPartition!=null)EditPartition(selectedEditDisk,selectedEditPartition);};
-        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(toolbar);
+        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(BuildInlineEditor());panel.Controls.Add(toolbar);
         diskMaps.Resize+=(s,e)=>FitDiskGroups();
         return panel;
     }

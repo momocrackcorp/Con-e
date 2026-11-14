@@ -16,11 +16,11 @@ El último formateo no puede establecerse de forma fiable a partir de la fecha d
 
 ## Compilación con GitHub
 
-Subir el contenido de esta carpeta a la raíz de un repositorio. El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualmente desde Actions. Descargar el artefacto `Con-E-v0.1.0-portable`, extraer todo su contenido en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualmente desde Actions. Descargar el artefacto `Con-E-v0.1.0-portable`, extraer todo su contenido en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
 
 ## Pruebas pendientes en Windows
 
-1. Compilar con el workflow y confirmar que se genera el artefacto.
+1. Compilación y generación del artefacto: comprobadas en GitHub Actions.
 2. Abrir desde USB sin permisos de administrador y comparar modelo, serie, RAM y BIOS con Información del sistema (msinfo32).
 3. Comparar controladores y códigos PnP con Administrador de dispositivos.
 4. Desconectar internet: la lectura local y el informe deben seguir disponibles.
@@ -31,4 +31,4 @@ Subir el contenido de esta carpeta a la raíz de un repositorio. El workflow de 
 
 ## Estado de entrega
 
-Código inicial y workflow preparados. No compilado ni ejecutado en Windows en el entorno de preparación. No se incluyen herramientas de terceros. La reseña oficial automática del fabricante y un catálogo de accesos del launcher quedan para una siguiente versión.
+Compilación Windows correcta en GitHub Actions: [primera compilación](https://github.com/momocrackcorp/Con-e/actions/runs/43550847741). Paquete portátil generado. Ejecución interactiva y prueba desde USB pendientes. No se incluyen herramientas de terceros. La reseña oficial automática del fabricante y un catálogo de accesos del launcher quedan para una siguiente versión.

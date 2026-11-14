@@ -98,7 +98,7 @@ internal sealed partial class MainForm : Form
     async Task RefreshData()
     {
         if(applyingChanges)return;
-        pendingResizes.Clear();inlineEditor.Visible=false;UpdatePending();
+        pendingResizes.Clear();inlineEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
         actions.Enabled = false; status.Text = "Leyendo información del equipo…";
         try
         {

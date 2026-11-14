@@ -93,7 +93,7 @@ internal sealed partial class MainForm
         resizePreview.Changed+=(bytes)=>{previewUpdating=true;editSize.Value=Math.Max(editSize.Minimum,Math.Min(editSize.Maximum,decimal.Floor(bytes/1048576m)));previewUpdating=false;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();};
         stage.Click+=(s,e)=>{if(editingDisk!=null&&editingPartition!=null)StageResize(editingDisk,editingPartition,(ulong)editSize.Value*1048576UL);};
         applyPending.Click+=async(s,e)=>await ApplyPending();
-        discardPending.Click+=(s,e)=>{pendingResizes.Clear();UpdatePending();};
+        discardPending.Click+=(s,e)=>{pendingResizes.Clear();inlineEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();};
         return inlineEditor;
     }
     void StageResize(DiskLayout disk,PartitionLayout part,ulong bytes)
@@ -130,7 +130,7 @@ internal sealed partial class MainForm
         catch(Exception ex){MessageBox.Show(this,"La ejecución se detuvo: "+ex.Message+Environment.NewLine+"Las operaciones terminadas no se deshacen automáticamente. Se actualizará el mapa.","Resultado",MessageBoxButtons.OK,MessageBoxIcon.Information);}
         finally
         {
-            FormClosing-=closeGuard;pendingResizes.Clear();applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;inlineEditor.Visible=false;UpdatePending();await RefreshData();
+            FormClosing-=closeGuard;pendingResizes.Clear();applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;inlineEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();await RefreshData();
         }
     }
     async void EditPartition(DiskLayout disk,PartitionLayout part)
@@ -156,7 +156,7 @@ internal sealed partial class MainForm
         previewUpdating=false;
         resizePreview.Minimum=(ulong)min*1048576UL;resizePreview.Maximum=(ulong)max*1048576UL;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();
         editLimits.Text="Disco "+disk.Number+" · "+part.Letter+": · actual "+Space(part.Size)+Environment.NewLine+"Permitido: "+Space(minimum)+" a "+Space(maximum)+". Arrastra el borde derecho.";
-        inlineEditor.Visible=true;UpdatePending();
+        partitionInfo.Visible=false;inlineEditor.Visible=true;UpdatePending();
     }
 }
 internal sealed class PendingResize

@@ -47,8 +47,13 @@ internal sealed partial class MainForm
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);
-        diskMaps.Resize+=(s,e)=> { foreach(Control group in diskMaps.Controls) group.Width=Math.Max(240,diskMaps.ClientSize.Width-diskMaps.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8); };
+        diskMaps.Resize+=(s,e)=>FitDiskGroups();
         return panel;
+    }
+    void FitDiskGroups()
+    {
+        int width=Math.Max(240,diskMaps.ClientSize.Width-diskMaps.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8);
+        foreach(var group in diskMaps.Controls.OfType<TableLayoutPanel>()) { group.MinimumSize=new Size(width,0);group.MaximumSize=new Size(width,0);group.Width=width; }
     }
     static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
@@ -98,7 +103,7 @@ internal sealed partial class MainForm
                 if(list.Items.Count>0){var first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
             }
         }
-        finally{diskMaps.ResumeLayout(true);}
+        finally{diskMaps.ResumeLayout(true);FitDiskGroups();}
     }
     static List<DiskLayout> ReadDiskLayouts(Snapshot data)
     {

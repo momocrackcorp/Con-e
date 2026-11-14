@@ -1,4 +1,4 @@
-# Con-E v0.5.0 — hardware y controladores
+# Con-E v0.6.0 — hardware y controladores
 
 Herramienta portátil USB para Windows 10 y 11. Requiere .NET Framework 4.8 disponible en el equipo. Interfaz nativa Windows Forms: no incorpora un navegador, un servicio ni un controlador propio.
 
@@ -37,7 +37,7 @@ Las propiedades dependen de lo informado por el sistema y el fabricante. Un cód
 
 GitHub Actions compila el ejecutable y ejecuta pruebas de interfaz con datos simulados. Se comprueba expansión y contracción de tarjetas, extracción de IDs PCI/USB, ficha de dispositivo desconocido, navegación, explicaciones, varios anchos y datos ausentes. Las capturas se guardan en `Con-E-interfaz-pruebas` y no se añaden al paquete portátil.
 
-Descargar `Con-E-v0.5.0-portable`, extraer todo en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+Descargar `Con-E-v0.6.0-portable`, extraer todo en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
 
 Pendiente de validar en equipos reales: comparación con Administrador de dispositivos y msinfo32, dispositivos sin controlador, distintas escalas DPI de Windows, permisos limitados, funcionamiento desde USB y comportamiento con proveedores WMI bloqueados. La prueba de escala programática no sustituye la validación en una pantalla con DPI real diferente. El tiempo límite WMI depende del comportamiento de cada proveedor.
 
@@ -51,7 +51,7 @@ La búsqueda/reseña automática del fabricante y una base de modelos para resol
 - [Identificadores USB — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/standard-usb-identifiers)
 
 
-## Cambios v0.5.0
+## Cambios v0.6.0
 
 Tarjetas ordenadas A–H: CPU, RAM, video, discos, red, BIOS, Windows y usuario. La identificación del equipo queda a continuación. RAM muestra posiciones SMBIOS y módulos por ranura con tipo y capacidad; puede incluir memoria soldada. Storage WMI distingue medio HDD/SSD y bus disponible, sin inferir formato M.2. Particiones y volúmenes se presentan por separado: no se ha implementado todavía su asociación gráfica completa por disco.
 
@@ -64,10 +64,21 @@ Herramientas incluye consulta y actualización de aplicaciones con WinGet, si es
 La navegación hardware tiene divisor ajustable y columnas adaptables para resolver las capturas con textos truncados. Los datos extensos conservan desplazamiento horizontal.
 
 
-## Logos y miniaturas v0.5.0
+## Logos y miniaturas v0.6.0
 
 11 marcas incluidas sin descargas durante la ejecución: Intel, AMD, ARM, HP, Dell, Lenovo, ASUS, Acer, NVIDIA, Samsung y Qualcomm. Se seleccionan por coincidencia del nombre informado por Windows, no por inferencia de IDs desconocidos. Sin coincidencia se conserva la ilustración genérica. Las imágenes se integran en el ejecutable. No se usan calcomanías de generación Core/Ryzen para no atribuir una certificación o generación no verificada.
 
 Miniaturas vectoriales locales de procesador, módulo RAM, tarjeta de video, HDD, SSD, módulo de almacenamiento NVMe, red y BIOS/placa. Son esquemas orientativos, no fotos del modelo real. La miniatura NVMe no confirma un formato físico M.2. Cuando hay varios discos, el resumen no representa físicamente todos los modelos.
 
 Fuente de logos: Simple Icons (https://github.com/simple-icons/simple-icons), versiones monocromáticas con color identificativo; no implica afiliación. Ver assets/brands/ATTRIBUTION.md. Las pruebas validan selección de marcas y decodificación de los 11 recursos, además del diseño adaptable.
+
+
+## Mapa de discos v0.6.0
+
+Nueva pestaña dentro de Con-E, accesible también desde Almacenamiento. Cada disco físico tiene mapa proporcional por offset y tamaño, lista seleccionable y ficha inferior. Muestra GPT/MBR, EFI, MSR, recuperación, particiones y los intervalos no particionados de una lectura completa. Estos intervalos pueden contener alineación o metadatos. Las particiones muy pequeñas se pueden seleccionar por la lista; las flechas del teclado recorren el mapa. No se ensancha artificialmente la representación de una partición pequeña para ponerle texto.
+
+La asociación de letras, formato, tamaño del volumen y espacio libre se consulta cuando la partición tiene letra. Los volúmenes sin letra conservan su partición pero sus datos de espacio libre se muestran como no disponibles. No se adivina su ocupación. Los discos con particiones solapadas no reciben un mapa proporcional; se conserva la lista. Una lectura parcial no genera intervalos libres ficticios.
+
+Esta entrega es una vista interactiva de consulta. No crea, elimina, formatea, mueve ni redimensiona particiones. El gestor de edición completo sigue pendiente. Algunas consultas Storage WMI pueden requerir permisos adicionales o no estar disponibles; las incidencias se informan.
+
+Las pruebas automáticas añaden un disco simulado con selección y comprobación de intervalos completos frente a lectura parcial. La distribución real y USB/RAID/dinámicos debe validarse en equipos físicos.

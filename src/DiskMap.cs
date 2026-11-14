@@ -80,7 +80,7 @@ internal sealed partial class MainForm
                 var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var segments=disk.Segments();
                 var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(64,lineHeight*3), Margin=new Padding(0,8,0,8) };
-                var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.Name="partition-list";list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
+                var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.Name="partition-list";list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
                 list.Columns[0].Width=350;list.Columns[1].Width=(int)(115*DeviceDpi/96f);list.Columns[2].Width=(int)(115*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
@@ -192,3 +192,4 @@ internal sealed class PartitionStrip : Control
     protected override void OnKeyDown(KeyEventArgs e){base.OnKeyDown(e);if(segments.Count==0)return;int index=segments.IndexOf(Selection);if(e.KeyCode==Keys.Left||e.KeyCode==Keys.Right){index=Math.Max(0,Math.Min(segments.Count-1,index+(e.KeyCode==Keys.Left?-1:1)));Choose(segments[index]);e.Handled=true;}}
     void Choose(PartitionLayout p){Selection=p;Invalidate();if(Selected!=null)Selected(p);}
 }
+

@@ -67,25 +67,35 @@ internal sealed partial class MainForm
         try
         {
             foreach(Control old in diskMaps.Controls.Cast<Control>().ToArray())old.Dispose();
+            partitionInfo.Height=Math.Max(140,TextRenderer.MeasureText("Ag",Font).Height*6+12);
             partitionInfo.Text="Selecciona un bloque del mapa o una fila para ver sus datos. Las particiones pequeñas se seleccionan también en la lista.";
             if(diskLayouts.Count==0) { diskMaps.Controls.Add(new Label { Text="No se pudo obtener el mapa físico de discos. Revisa las incidencias de lectura.", AutoSize=true, MaximumSize=new Size(500,0) });return; }
             foreach(var disk in diskLayouts)
             {
-                var group=new Panel { Width=Math.Max(240,diskMaps.ClientSize.Width-60), Height=260, BackColor=Color.White, Margin=new Padding(0,0,0,16), Padding=new Padding(12) };
+                int lineHeight=TextRenderer.MeasureText("Ag",Font).Height;
+                var group=new TableLayoutPanel { ColumnCount=1,RowCount=3,Width=Math.Max(240,diskMaps.ClientSize.Width-60),AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,BackColor=Color.White,Margin=new Padding(0,0,0,16),Padding=new Padding(12),Font=Font };
+                group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+                group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                group.RowStyles.Add(new RowStyle(SizeType.Absolute,Math.Max(64,lineHeight*3)));
                 var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var segments=disk.Segments();
-                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Top, Height=72, Margin=new Padding(0,8,0,8) };
-                var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.GridLines=false;list.ShowItemToolTips=true;
+                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(64,lineHeight*3), Margin=new Padding(0,8,0,8) };
+                var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.Name="partition-list";list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
                 list.Columns[0].Width=350;list.Columns[1].Width=(int)(115*DeviceDpi/96f);list.Columns[2].Width=(int)(115*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
                     var item=new ListViewItem(new[]{p.Title,Space(p.Size),p.Free.HasValue?Space(p.Free.Value):"No disponible"}) {Tag=p,ToolTipText=p.Title};list.Items.Add(item);
                 }
+                int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;
+                int listHeight=lineHeight*(Math.Max(3,Math.Min(8,rowCount))+2)+SystemInformation.HorizontalScrollBarHeight+12;
+                group.RowStyles.Add(new RowStyle(SizeType.Absolute,listHeight));
+                list.MinimumSize=new Size(0,listHeight);
                 map.Selected+=(p)=> { SelectPartition(disk,p); foreach(ListViewItem row in list.Items)row.Selected=ReferenceEquals(row.Tag,p); };
                 list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;var p=(PartitionLayout)list.SelectedItems[0].Tag;map.Selection=p;map.Invalidate();SelectPartition(disk,p);};
                 list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(180,width-list.Columns[1].Width-list.Columns[2].Width);};
                 group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(200,group.Width-30),0);
-                group.Controls.Add(list);group.Controls.Add(map);group.Controls.Add(heading);diskMaps.Controls.Add(group);
+                group.Controls.Add(heading,0,0);group.Controls.Add(map,0,1);group.Controls.Add(list,0,2);diskMaps.Controls.Add(group);
+                if(list.Items.Count>0){var first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
             }
         }
         finally{diskMaps.ResumeLayout(true);}

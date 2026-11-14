@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.6.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.6.2", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -314,6 +314,17 @@ internal sealed partial class MainForm
             form.SelectPartition(testDisk,part);
             if(!form.partitionInfo.Text.Contains("50"))throw new InvalidOperationException("Selección de partición incorrecta");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-discos.png"),ImageFormat.Png);}
+            var originalFont=form.Font;
+            form.Font=new Font("Segoe UI",20);form.RenderDiskMaps();Application.DoEvents();
+            var mapGroup=form.diskMaps.Controls.OfType<TableLayoutPanel>().First();
+            var partitionList=mapGroup.Controls.OfType<ListView>().Single();
+            if(partitionList.ClientSize.Height<TextRenderer.MeasureText("Ag",form.Font).Height*3)throw new InvalidOperationException("Liste de particiones comprimida a escala doble");
+            if(partitionList.Bottom>mapGroup.ClientSize.Height-mapGroup.Padding.Bottom+1)throw new InvalidOperationException("Lista fuera del panel");
+            if(partitionList.Items.Count<3)throw new InvalidOperationException("Faltan intervalos");
+            var freeRow=partitionList.Items.Cast<ListViewItem>().Last();freeRow.Selected=true;partitionList.Focus();Application.DoEvents();
+            if(!form.partitionInfo.Text.Contains("Intervalo no particionado"))throw new InvalidOperationException("Selección de fila no actualiza detalles");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-texto-200.png"),ImageFormat.Png);}
+            form.Font=originalFont;form.RenderDiskMaps();Application.DoEvents();
             form.tabs.SelectedIndex=0;
             form.ToggleHelp(); Application.DoEvents();
             if (form.helpLabels.Any(l => !l.Visible)) throw new InvalidOperationException("No se muestran las explicaciones");

@@ -96,3 +96,12 @@ La validación de GitHub ahora ejecuta también la consulta real sobre los disco
 El mapa y la lista utilizan un panel de filas con altura calculada a partir de la fuente y el número de particiones, en lugar de un contenedor fijo de 260 píxeles. La lista conserva al menos tres filas visibles y el detalle inferior reserva seis líneas. Se selecciona inicialmente la primera partición, y la selección desde lista o barra actualiza la ficha.
 
 Se añade una prueba de fuente de 20 puntos que regenera el mapa, exige altura útil para filas, comprueba límites y selecciona un intervalo mediante la lista. No equivale a una prueba en todos los monitores DPI reales.
+
+
+## Edición v0.7.0
+
+Botón Reducir / ampliar partición para GPT de datos básicos con letra y formato NTFS, leído por Storage WMI con identidad de disco. Consulta GetSupportedSize y aplica Resize mediante WMI. Requiere administrador; puede reabrirse mediante UAC y no ejecuta automáticamente ninguna operación al elevar. Muestra tamaño final en MiB, exige escribir APLICAR y muestra confirmación de destino/tamaño. Revalida identidad de disco, tamaño, número y offset de partición antes de aplicar. Reconsulta límites inmediatamente antes del cambio y refresca el mapa al terminar.
+
+No admite crear, formatear, eliminar, mover, convertir ni modificar EFI/MSR/recuperación. No puede ampliar a través de una partición intermedia. Windows puede rechazar el cambio por cifrado, archivos inmovibles o estado del volumen; un respaldo previo sigue siendo necesario. No hay promesa de ausencia de pérdida de datos.
+
+CI incorpora una prueba sobre VHD temporal propio: crea GPT y NTFS, reduce de 180 a 128 MiB, amplía a tamaño inicial y comprueba contenido de un archivo, luego desmonta el VHD. No usa discos del usuario. La consulta original de sólo lectura ahora tiene esta operación de modificación explícita.

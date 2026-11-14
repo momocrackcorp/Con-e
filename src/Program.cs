@@ -17,6 +17,8 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { try { MainForm.SmokeTest(); } catch(Exception ex) { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa")); File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","error.txt"),ex.ToString()); Environment.ExitCode=1; } return; }
+        if(Environment.GetCommandLineArgs().Contains("--resize-test"))
+        {try{MainForm.ResizeIntegrationTest();}catch(Exception ex){File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","resize-error.txt"),ex.ToString());Environment.ExitCode=1;}return;}
         Application.Run(new MainForm());
     }
 }
@@ -45,7 +47,7 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.6.2";
+        Text = "Con-E · Diagnóstico y herramientas · v0.7.0";
         BackColor = CanvasColor;
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -199,7 +201,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.6.2\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.7.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

@@ -21,6 +21,27 @@ jobs:
           $p = Start-Process output/Con-E.exe -ArgumentList '--smoke-test' -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'La prueba de interfaz excedió 120 segundos' }
           if ($p.ExitCode -ne 0) { Get-Content output/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló la prueba de interfaz' }
+      - name: Probar reducción y ampliación sobre VHD desechable
+        shell: pwsh
+        run: |
+          $image = Join-Path $env:RUNNER_TEMP 'cone-test.vhd'
+          $script = Join-Path $env:RUNNER_TEMP 'cone-vhd.txt'
+          @("create vdisk file=`"$image`" maximum=256 type=expandable", "select vdisk file=`"$image`"", 'attach vdisk') | Set-Content $script
+          try {
+            diskpart /s $script
+            $disk = Get-DiskImage -ImagePath $image | Get-Disk
+            $disk | Initialize-Disk -PartitionStyle GPT
+            $part = New-Partition -DiskNumber $disk.Number -Size 180MB -AssignDriveLetter
+            $part | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'CONE_TEST' -Confirm:$false | Out-Null
+            $env:CONE_TEST_DISK_NUMBER = [string]$disk.Number
+            $env:CONE_TEST_DISK_ID = (Get-Disk -Number $disk.Number).UniqueId
+            $p = Start-Process output/Con-E.exe -ArgumentList '--resize-test' -PassThru
+            if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'Prueba VHD excedió plazo' }
+            if ($p.ExitCode -ne 0) { Get-Content output/qa/resize-error.txt -ErrorAction SilentlyContinue; throw 'Falló prueba de redimensionamiento' }
+          } finally {
+            Dismount-DiskImage -ImagePath $image -ErrorAction SilentlyContinue
+            Remove-Item $image -Force -ErrorAction SilentlyContinue
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -36,6 +57,6 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.6.2-portable
+          name: Con-E-v0.7.0-portable
           path: output/
           if-no-files-found: error

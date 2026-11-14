@@ -11,6 +11,7 @@ internal sealed class DiskLayout
 {
     public uint Number;
     public string Name, Style;
+    public string UniqueId="";
     public ulong Size;
     public bool Complete;
     public string ReadNote="";
@@ -43,10 +44,16 @@ internal sealed partial class MainForm
     readonly TextBox partitionInfo = new TextBox { Dock=DockStyle.Bottom, Multiline=true, ReadOnly=true, Height=135, ScrollBars=ScrollBars.Vertical, BackColor=Color.White, BorderStyle=BorderStyle.FixedSingle };
     readonly List<DiskLayout> diskLayouts = new List<DiskLayout>();
     TabPage disksPage;
+    readonly Button resizePartition=new Button {Text="Reducir / ampliar partición…",AutoSize=true,Enabled=false};
+    DiskLayout selectedEditDisk; PartitionLayout selectedEditPartition;
     Control BuildDiskMap()
     {
         var panel=new Panel { Dock=DockStyle.Fill };
-        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);
+        var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
+        toolbar.Controls.Add(resizePartition);
+        toolbar.Controls.Add(new Label {Text="Modificar tamaño de particiones GPT NTFS. Requiere administrador.",AutoSize=true,Margin=new Padding(8)});
+        resizePartition.Click+=(s,e)=>{if(selectedEditDisk!=null&&selectedEditPartition!=null)EditPartition(selectedEditDisk,selectedEditPartition);};
+        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(toolbar);
         diskMaps.Resize+=(s,e)=>FitDiskGroups();
         return panel;
     }
@@ -58,13 +65,14 @@ internal sealed partial class MainForm
     static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
     {
+        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);
         partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+Environment.NewLine+
             "Tamaño del bloque: "+Space(p.Size)+" · Offset: "+p.Offset.ToString(CultureInfo.InvariantCulture)+" bytes"+Environment.NewLine+
             (p.Gap ? "Intervalo sin partición en el mapa leído; puede incluir espacios de alineación o metadatos." :
             "Sistema de archivos: "+p.FileSystem+" · Etiqueta: "+p.Label+Environment.NewLine+
             "Tamaño del volumen: "+(p.VolumeSize.HasValue?Space(p.VolumeSize.Value):"No disponible")+" · Libre: "+(p.Free.HasValue?Space(p.Free.Value):"No disponible")+
             (p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free.Value<=p.VolumeSize.Value?" · Ocupado: "+Space(p.VolumeSize.Value-p.Free.Value):""))+
-            Environment.NewLine+"Vista de consulta: no se modifican particiones.";
+            Environment.NewLine+(CanResize(disk,p)?"Usa Reducir / ampliar partición para modificar su tamaño.":"Esta selección no admite modificación de tamaño en Con-E.");
     }
     void RenderDiskMaps()
     {
@@ -72,6 +80,7 @@ internal sealed partial class MainForm
         try
         {
             foreach(Control old in diskMaps.Controls.Cast<Control>().ToArray())old.Dispose();
+            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;
             partitionInfo.Height=Math.Max(140,TextRenderer.MeasureText("Ag",Font).Height*6+12);
             partitionInfo.Text="Selecciona un bloque del mapa o una fila para ver sus datos. Las particiones pequeñas se seleccionan también en la lista.";
             if(diskLayouts.Count==0) { diskMaps.Controls.Add(new Label { Text="No se pudo obtener el mapa físico de discos. Revisa las incidencias de lectura.", AutoSize=true, MaximumSize=new Size(500,0) });return; }
@@ -110,9 +119,9 @@ internal sealed partial class MainForm
         var result=new List<DiskLayout>();
         try
         {
-            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle FROM MSFT_Disk"))
+            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle,UniqueId FROM MSFT_Disk"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
-            { result.Add(new DiskLayout { Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
+            { result.Add(new DiskLayout { UniqueId=Value(row,"UniqueId"),Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
             using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,MbrType FROM MSFT_Partition"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             {

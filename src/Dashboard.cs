@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.8.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.9.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -180,7 +180,6 @@ internal sealed partial class MainForm
                 Line(disk, volume.FreeGiB.ToString("0.0") + " GiB libres de " + volume.TotalGiB.ToString("0.0") + " GiB");
             }
             Line(disk, Read("Tipos de almacenamiento"));
-            disk.Controls.Add(ActionButton("Abrir mapa de particiones", () => tabs.SelectedTab = disksPage));
             InlineDetails(disk, "Ver discos físicos", "Disco físico", "Particiones");
             Help(disk, "La barra indica espacio ocupado. No evalúa la salud del disco. Cada unidad puede ser una partición de un mismo disco físico.");
 
@@ -301,41 +300,6 @@ internal sealed partial class MainForm
                 }
                 using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-" + width + ".png"), ImageFormat.Png); }
             }
-            var realSnapshot=new Snapshot();var realDisks=ReadDiskLayouts(realSnapshot);
-            if(realDisks.Count==0 || !realDisks.Any(d=>d.Partitions.Count>0))throw new InvalidOperationException("La consulta real no leyó particiones: "+string.Join(" | ",realSnapshot.Warnings));
-            File.WriteAllText(Path.Combine(dir,"lectura-real.txt"),"Discos: "+realDisks.Count+" · Particiones: "+realDisks.Sum(d=>d.Partitions.Count)+Environment.NewLine+string.Join(Environment.NewLine,realDisks.Select(d=>d.ReadNote)));
-            var testDisk=new DiskLayout {Number=0,Name="SSD de prueba",Size=500UL*1073741824,Style="GPT",Complete=true};
-            var part=new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,Letter="C",Type="Datos básicos",FileSystem="NTFS",VolumeSize=200UL*1073741824,Free=50UL*1073741824};
-            testDisk.Partitions.Add(part);
-            if(testDisk.Segments().Count!=3)throw new InvalidOperationException("Intervalos no calculados");
-            testDisk.Complete=false;if(testDisk.Segments().Count!=1)throw new InvalidOperationException("Se inventaron intervalos con lectura incompleta");testDisk.Complete=true;
-            form.diskLayouts.Add(testDisk);form.RenderDiskMaps();form.tabs.SelectedTab=form.disksPage;Application.DoEvents();
-            if(!form.tabs.TabPages.Contains(form.disksPage) || !form.diskMaps.Visible)throw new InvalidOperationException("Pestaña de discos ausente");
-            form.SelectPartition(testDisk,part);
-            if(!form.partitionInfo.Text.Contains("50"))throw new InvalidOperationException("Selección de partición incorrecta");
-            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-discos.png"),ImageFormat.Png);}
-            var originalFont=form.Font;
-            form.Font=new Font("Segoe UI",20);form.RenderDiskMaps();Application.DoEvents();
-            var mapGroup=form.diskMaps.Controls.OfType<TableLayoutPanel>().First();
-            var partitionList=mapGroup.Controls.OfType<ListView>().Single();
-            if(partitionList.ClientSize.Height<TextRenderer.MeasureText("Ag",form.Font).Height*3)throw new InvalidOperationException("Liste de particiones comprimida a escala doble");
-            if(partitionList.Bottom>mapGroup.ClientSize.Height-mapGroup.Padding.Bottom+1)throw new InvalidOperationException("Lista fuera del panel");
-            if(partitionList.Items.Count<3)throw new InvalidOperationException("Faltan intervalos");
-            var freeRow=partitionList.Items.Cast<ListViewItem>().Last();freeRow.Selected=true;partitionList.Focus();Application.DoEvents();
-            if(!form.partitionInfo.Text.Contains("Intervalo no particionado"))throw new InvalidOperationException("Selección de fila no actualiza detalles");
-            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"mapa-texto-200.png"),ImageFormat.Png);}
-            form.Font=originalFont;form.RenderDiskMaps();Application.DoEvents();
-            form.Width=1100;form.Font=originalFont;form.RenderDiskMaps();Application.DoEvents();
-            testDisk.UniqueId="SIMULATED";
-            form.ConfigureEditor(testDisk,part,100UL*1048576,250UL*1073741824);
-            form.editSize.Value=150*1024;
-            var stage=form.inlineEditor.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio");stage.PerformClick();Application.DoEvents();
-            if(form.pendingResizes.Count!=1||!form.applyPending.Enabled||part.Size!=200UL*1073741824)throw new InvalidOperationException("Vista previa modificó el modelo o no generó operación pendiente");
-            form.editSize.Value=160*1024;stage.PerformClick();Application.DoEvents();
-            if(form.pendingResizes.Count!=1||form.pendingResizes[0].Bytes!=160UL*1073741824)throw new InvalidOperationException("Se duplicó una operación para la misma partición");
-            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"editor-visual.png"),ImageFormat.Png);}
-            form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||form.applyPending.Enabled)throw new InvalidOperationException("Descartar no limpia operaciones");form.inlineEditor.Visible=false;
-            form.tabs.SelectedIndex=0;
             form.ToggleHelp(); Application.DoEvents();
             if (form.helpLabels.Any(l => !l.Visible)) throw new InvalidOperationException("No se muestran las explicaciones");
             form.tabs.SelectedTab = form.driverPage; Application.DoEvents();

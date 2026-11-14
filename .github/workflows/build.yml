@@ -21,6 +21,14 @@ jobs:
           $p = Start-Process output/Con-E.exe -ArgumentList '--smoke-test' -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'La prueba de interfaz excedió 120 segundos' }
           if ($p.ExitCode -ne 0) { Get-Content output/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló la prueba de interfaz' }
+      - name: Compilar WinPart independiente
+        run: dotnet build WinPart/src/WinPart.csproj -c Release -o winpart
+      - name: Probar interfaz independiente WinPart
+        shell: pwsh
+        run: |
+          $p = Start-Process winpart/WinPart.exe -ArgumentList '--smoke-test' -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'WinPart excedió plazo' }
+          if ($p.ExitCode -ne 0) { Get-Content winpart/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló WinPart' }
       - name: Probar reducción y ampliación sobre VHD desechable
         shell: pwsh
         run: |
@@ -35,9 +43,9 @@ jobs:
             $part | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'CONE_TEST' -Confirm:$false | Out-Null
             $env:CONE_TEST_DISK_NUMBER = [string]$disk.Number
             $env:CONE_TEST_DISK_ID = (Get-Disk -Number $disk.Number).UniqueId
-            $p = Start-Process output/Con-E.exe -ArgumentList '--resize-test' -PassThru
+            $p = Start-Process winpart/WinPart.exe -ArgumentList '--resize-test' -PassThru
             if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'Prueba VHD excedió plazo' }
-            if ($p.ExitCode -ne 0) { Get-Content output/qa/resize-error.txt -ErrorAction SilentlyContinue; throw 'Falló prueba de redimensionamiento' }
+            if ($p.ExitCode -ne 0) { Get-Content winpart/qa/resize-error.txt -ErrorAction SilentlyContinue; throw 'Falló prueba de redimensionamiento' }
           } finally {
             Dismount-DiskImage -ImagePath $image -ErrorAction SilentlyContinue
             Remove-Item $image -Force -ErrorAction SilentlyContinue
@@ -57,6 +65,23 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.8.0-portable
+          name: Con-E-v0.9.0-portable
           path: output/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: WinPart-pruebas
+          path: winpart/qa/
+          if-no-files-found: error
+      - name: Preparar WinPart portátil
+        shell: pwsh
+        run: |
+          Remove-Item winpart/qa -Recurse -Force
+          Copy-Item WinPart/README.md winpart/README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WinPart-v0.1.0-portable
+          path: winpart/
           if-no-files-found: error

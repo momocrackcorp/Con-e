@@ -17,8 +17,6 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { try { MainForm.SmokeTest(); } catch(Exception ex) { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa")); File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","error.txt"),ex.ToString()); Environment.ExitCode=1; } return; }
-        if(Environment.GetCommandLineArgs().Contains("--resize-test"))
-        {try{MainForm.ResizeIntegrationTest();}catch(Exception ex){File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","resize-error.txt"),ex.ToString());Environment.ExitCode=1;}return;}
         Application.Run(new MainForm());
     }
 }
@@ -27,7 +25,6 @@ internal sealed class Snapshot
 {
     public readonly List<string[]> Summary = new List<string[]>();
     public readonly List<string[]> Drivers = new List<string[]>();
-    public readonly List<DiskLayout> Disks = new List<DiskLayout>();
     public readonly List<HardwareItem> Hardware = new List<HardwareItem>();
     public readonly List<string> Warnings = new List<string>();
     public string Manufacturer = "", Model = "";
@@ -47,14 +44,13 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.8.0";
+        Text = "Con-E · Diagnóstico y herramientas · v0.9.0";
         BackColor = CanvasColor;
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
         tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
         var home = new TabPage("Mi equipo") { BackColor = CanvasColor }; home.Controls.Add(dashboard); tabs.TabPages.Add(home);
-        disksPage=new TabPage("Mapa de discos");disksPage.Controls.Add(BuildDiskMap());tabs.TabPages.Add(disksPage);
         var first = new TabPage("Detalles técnicos"); first.Controls.Add(summary);
         driverPage = new TabPage("Hardware y controladores"); driverPage.Controls.Add(BuildHardwareBrowser()); tabs.TabPages.Add(driverPage);
         var toolsPage = new TabPage("Herramientas") { BackColor = CanvasColor }; toolsPage.Controls.Add(BuildTools()); tabs.TabPages.Add(toolsPage);
@@ -97,14 +93,12 @@ internal sealed partial class MainForm : Form
     }
     async Task RefreshData()
     {
-        if(applyingChanges)return;
-        pendingResizes.Clear();inlineEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
         actions.Enabled = false; status.Text = "Leyendo información del equipo…";
         try
         {
             var data = await Task.Run(() => Collect());
             if (IsDisposed || Disposing) return;
-            current = data; diskLayouts.Clear(); diskLayouts.AddRange(data.Disks); RenderDiskMaps();
+            current = data;
             Fill(summary, data.Summary); ResizeSummary(); Fill(drivers, data.Drivers); RenderDashboard(); RenderHardwareBrowser();
             status.Text = data.Warnings.Count == 0 ? "Lectura completada · " + data.Drivers.Count + " registros de controladores" : "Lectura parcial · " + string.Join(" | ", data.Warnings);
         }
@@ -194,7 +188,6 @@ internal sealed partial class MainForm : Form
         data.Drivers.AddRange(deviceRows.OrderByDescending(pair => data.ProblemDevices.Contains(pair.Key)).ThenBy(pair => pair.Value[0]).Select(pair => pair.Value));
         CollectComponents(data);
         CollectExtra(data);
-        data.Disks.AddRange(ReadDiskLayouts(data));
         return data;
     }
     void Export()
@@ -203,7 +196,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.8.0\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.9.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

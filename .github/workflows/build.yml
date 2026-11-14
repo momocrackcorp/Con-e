@@ -1,0 +1,28 @@
+name: Compilar Con-E
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compilar
+        run: dotnet build src/Con-E.csproj -c Release -o output
+      - name: Preparar USB
+        shell: pwsh
+        run: |
+          Copy-Item README.md output/
+          New-Item output/Tools -ItemType Directory -Force
+          Copy-Item Tools/LEEME.txt output/Tools/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Con-E-v0.1.0-portable
+          path: output/
+          if-no-files-found: error

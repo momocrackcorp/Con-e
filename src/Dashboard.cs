@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.3.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.4.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -46,7 +46,17 @@ internal sealed partial class MainForm
             Open(path);
         }));
         panel.Controls.Add(ActionButton("Guardar informe del equipo", Export));
+        panel.Controls.Add(ActionButton("Consultar aplicaciones actualizables (WinGet)", () => OpenWinget(false)));
+        panel.Controls.Add(ActionButton("Actualizar aplicaciones con WinGet", () => OpenWinget(true)));
+        panel.Controls.Add(ActionButton("Controladores: abrir Windows Update", () => Open("ms-settings:windowsupdate-optionalupdates")));
+        panel.Controls.Add(new Label { Text = "WinGet actualiza aplicaciones. Los controladores se revisan mediante Windows Update o el fabricante.", AutoSize = true, MaximumSize = new Size(500, 0) });
         return panel;
+    }
+    void OpenWinget(bool upgrade)
+    {
+        string alias = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "winget.exe");
+        if (!File.Exists(alias)) { status.Text = "WinGet no está disponible en este usuario. No se instalará automáticamente."; return; }
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/k winget upgrade" + (upgrade ? " --all" : "")) { UseShellExecute = true });
     }
     Button ActionButton(string caption, Action action)
     {
@@ -118,9 +128,11 @@ internal sealed partial class MainForm
             Line(identity, "Nombre: " + Read("Nombre del equipo"));
             identity.Controls.Add(ActionButton("Copiar número de serie", () => { if (current != null) Clipboard.SetText(Read("Serie del equipo (SMBIOS)")); }));
             identity.Controls.Add(ActionButton("Buscar fabricante", SearchManufacturer));
+            Line(identity, current == null ? "" : current.Manufacturer.ToUpperInvariant(), true);
             Help(identity, "El modelo y la serie son los datos registrados por el fabricante en el equipo.");
 
             var cpu = Card("⚙", "Procesador");
+            Line(cpu, Read("Marca del procesador"), true);
             Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
             cpu.Controls.Add(ActionButton("Explorar componentes", () => tabs.SelectedTab = driverPage));
             Help(cpu, "Ejecuta las instrucciones de los programas. Los núcleos permiten repartir tareas.");
@@ -136,7 +148,16 @@ internal sealed partial class MainForm
                 Line(ram, "Disponible: " + current.RamAvailableGiB.Value.ToString("0.0") + " GiB");
             }
             else Line(ram, "Uso de RAM: no disponible");
+            Line(ram, Read("Ranuras RAM"));
+            InlineDetails(ram, "Ver módulos por ranura", "Módulos RAM");
             Help(ram, "Es la memoria de trabajo de los programas abiertos. Pulsa Actualizar para obtener otra lectura; no es un monitor continuo.");
+
+            var video = Card("", "Memoria de video");
+            Line(video, Read("Adaptadores gráficos"), true);
+            Line(video, "Integrada / dedicada: pendiente de verificación DXGI");
+            Line(video, Read("Memoria gráfica DXGI"));
+            InlineDetails(video, "Ver datos gráficos", "Información gráfica");
+            Help(video, "DXGI distingue memoria de video y memoria compartida. En una GPU integrada, una reserva dedicada no demuestra que exista VRAM en chips separados.");
 
             var disk = Card("▰", "Almacenamiento");
             if (current == null || current.Volumes.Count == 0) Line(disk, current == null ? "Pendiente de lectura" : "No se pudieron leer las unidades.");
@@ -146,18 +167,34 @@ internal sealed partial class MainForm
                 Meter(disk, 100 * (volume.TotalGiB - volume.FreeGiB) / volume.TotalGiB, "Espacio ocupado " + volume.Name);
                 Line(disk, volume.FreeGiB.ToString("0.0") + " GiB libres de " + volume.TotalGiB.ToString("0.0") + " GiB");
             }
-            InlineDetails(disk, "Ver discos físicos", "Disco físico");
+            Line(disk, Read("Tipos de almacenamiento"));
+            InlineDetails(disk, "Ver discos físicos", "Disco físico", "Particiones");
             Help(disk, "La barra indica espacio ocupado. No evalúa la salud del disco. Cada unidad puede ser una partición de un mismo disco físico.");
+
+            var network = Card("", "Tarjeta de red");
+            Line(network, Read("Adaptadores de red"), true);
+            InlineDetails(network, "Ver características de red", "Características de red");
 
             var windows = Card("⊞", "Windows");
             Line(windows, Read("Windows"), true); Line(windows, Read("Arquitectura de Windows"));
             InlineDetails(windows, "Ver detalles de Windows", "Versión / compilación", "Tipo de sistema");
-            Help(windows, "Aquí puedes consultar la versión y arquitectura de Windows.");
+            windows.Controls.Add(ActionButton("Mostrar clave OEM disponible", () => RevealOem(windows)));
+            Help(windows, "La clave OEM de firmware puede no existir o no corresponder a la licencia activa de Windows.");
 
             var bios = Card("▦", "BIOS y placa base");
             Line(bios, Read("Versión de BIOS"), true); Line(bios, Read("Fabricante de BIOS")); Line(bios, "Fecha: " + Read("Fecha de BIOS"));
             InlineDetails(bios, "Ver modelo y números de serie", "Fabricante de placa base", "Modelo de placa base", "Serie de placa base", "Serie informada por BIOS");
             Help(bios, "La BIOS inicia el hardware antes de cargar Windows. Las series del equipo y de la placa pueden ser diferentes.");
+
+            var account = Card("", "Usuario");
+            Line(account, Environment.UserDomainName + "\\" + Environment.UserName, true);
+            Line(account, "Contraseña: Windows no la proporciona en texto legible.");
+
+            // A–H: equipo queda al final del resumen, detrás de las ocho categorías.
+            dashboard.Controls.SetChildIndex(cpu, 0); dashboard.Controls.SetChildIndex(ram, 1);
+            dashboard.Controls.SetChildIndex(video, 2); dashboard.Controls.SetChildIndex(disk, 3);
+            dashboard.Controls.SetChildIndex(network, 4); dashboard.Controls.SetChildIndex(bios, 5);
+            dashboard.Controls.SetChildIndex(windows, 6); dashboard.Controls.SetChildIndex(account, 7);
 
             var driver = Card("⚒", "Controladores");
             var driverText = current == null ? "Pendiente de lectura" : !current.PnpReadComplete ? "Lectura PnP incompleta" : current.ProblemDevices.Count == 0 ? "Sin error PnP informado" : current.ProblemDevices.Count + " dispositivo(s) por revisar";

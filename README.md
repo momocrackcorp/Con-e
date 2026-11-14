@@ -1,4 +1,4 @@
-# Con-E v0.3.0 — hardware y controladores
+# Con-E v0.4.0 — hardware y controladores
 
 Herramienta portátil USB para Windows 10 y 11. Requiere .NET Framework 4.8 disponible en el equipo. Interfaz nativa Windows Forms: no incorpora un navegador, un servicio ni un controlador propio.
 
@@ -37,7 +37,7 @@ Las propiedades dependen de lo informado por el sistema y el fabricante. Un cód
 
 GitHub Actions compila el ejecutable y ejecuta pruebas de interfaz con datos simulados. Se comprueba expansión y contracción de tarjetas, extracción de IDs PCI/USB, ficha de dispositivo desconocido, navegación, explicaciones, varios anchos y datos ausentes. Las capturas se guardan en `Con-E-interfaz-pruebas` y no se añaden al paquete portátil.
 
-Descargar `Con-E-v0.3.0-portable`, extraer todo en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+Descargar `Con-E-v0.4.0-portable`, extraer todo en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
 
 Pendiente de validar en equipos reales: comparación con Administrador de dispositivos y msinfo32, dispositivos sin controlador, distintas escalas DPI de Windows, permisos limitados, funcionamiento desde USB y comportamiento con proveedores WMI bloqueados. La prueba de escala programática no sustituye la validación en una pantalla con DPI real diferente. El tiempo límite WMI depende del comportamiento de cada proveedor.
 
@@ -49,3 +49,16 @@ La búsqueda/reseña automática del fabricante y una base de modelos para resol
 - [Hardware IDs — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/hardware-ids)
 - [Identificadores PCI — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices)
 - [Identificadores USB — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/standard-usb-identifiers)
+
+
+## Cambios v0.4.0
+
+Tarjetas ordenadas A–H: CPU, RAM, video, discos, red, BIOS, Windows y usuario. La identificación del equipo queda a continuación. RAM muestra posiciones SMBIOS y módulos por ranura con tipo y capacidad; puede incluir memoria soldada. Storage WMI distingue medio HDD/SSD y bus disponible, sin inferir formato M.2. Particiones y volúmenes se presentan por separado: no se ha implementado todavía su asociación gráfica completa por disco.
+
+DXGI consulta memoria dedicada de video, memoria de sistema dedicada y memoria compartida disponible. Es capacidad informada, no consumo actual. La clasificación integrada/dedicada sigue sin confirmar: una reserva dedicada no demuestra la existencia de chips VRAM separados.
+
+La clave OEM se consulta sólo mediante un botón y no se exporta en el informe. Puede faltar, o ser distinta de la licencia activa. El usuario actual se muestra; no se recuperan contraseñas de Windows. Las marcas se presentan como texto; los logos oficiales y calcomanías de fabricante quedan pendientes.
+
+Herramientas incluye consulta y actualización de aplicaciones con WinGet, si está disponible para ese usuario, y acceso a actualizaciones opcionales de Windows para revisar controladores. La actualización WinGet se inicia sólo al pulsar su botón; no acepta acuerdos automáticamente. No es un actualizador general de drivers.
+
+La navegación hardware tiene divisor ajustable y columnas adaptables para resolver las capturas con textos truncados. Los datos extensos conservan desplazamiento horizontal.

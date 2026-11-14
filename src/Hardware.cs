@@ -16,7 +16,7 @@ internal sealed class HardwareItem
 
 internal sealed partial class MainForm
 {
-    readonly TreeView hardwareTree = new TreeView { Dock = DockStyle.Left, Width = 185, HideSelection = false, FullRowSelect = true, BorderStyle = BorderStyle.None };
+    readonly TreeView hardwareTree = new TreeView { Dock = DockStyle.Fill, Width = 240, HideSelection = false, FullRowSelect = true, BorderStyle = BorderStyle.None };
     readonly ListView hardwareList = MakeList(new[] { "Componente", "Estado" });
     readonly ListView hardwareDetails = MakeList(new[] { "Propiedad", "Valor" });
     readonly Label hardwareTitle = new Label { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(10), ForeColor = TextColor };
@@ -37,7 +37,11 @@ internal sealed partial class MainForm
             Open("https://www.bing.com/search?q=" + Uri.EscapeDataString(selectedHardware.SearchId + " hardware fabricante controlador"));
         }));
         right.Controls.Add(split); right.Controls.Add(hardwareTitle); right.Controls.Add(toolbar);
-        area.Controls.Add(right); area.Controls.Add(hardwareTree);
+        var navigation = new SplitContainer { Dock = DockStyle.Fill, Size = new Size(1000, 600), SplitterDistance = 240, Panel1MinSize = 140, Panel2MinSize = 280 };
+        navigation.Panel1.Controls.Add(hardwareTree); navigation.Panel2.Controls.Add(right); area.Controls.Add(navigation);
+        hardwareList.ShowItemToolTips = true; hardwareDetails.ShowItemToolTips = true;
+        hardwareList.Resize += (s, e) => FitColumns(hardwareList, 0.68);
+        hardwareDetails.Resize += (s, e) => FitColumns(hardwareDetails, 0.36);
         var images = new ImageList { ImageSize = new Size(24, 24), ColorDepth = ColorDepth.Depth32Bit };
         foreach (string category in Categories) images.Images.Add(category, ComponentPicture.Icon(category));
         hardwareTree.ImageList = images;
@@ -49,6 +53,7 @@ internal sealed partial class MainForm
             selectedHardware = hardwareList.SelectedItems[0].Tag as HardwareItem;
             if (selectedHardware == null) return;
             hardwareTitle.Text = selectedHardware.Name;
+            hardwareTitle.MaximumSize = new Size(Math.Max(160, right.ClientSize.Width - 20), 0);
             Fill(hardwareDetails, selectedHardware.Properties.Select(p => new[] { p.Key, p.Value }).ToList());
         };
         return area;
@@ -61,6 +66,7 @@ internal sealed partial class MainForm
         try
         {
             hardwareTree.Nodes.Clear();
+            hardwareTree.Width = Math.Max(220, (int)(240 * DeviceDpi / 96f));
             foreach (string category in Categories)
             {
                 int count = current == null ? 0 : HardwareInCategory(category).Count();
@@ -87,7 +93,7 @@ internal sealed partial class MainForm
             {
                 var row = new ListViewItem(new[] { item.Name, item.ErrorCode.HasValue ? PnpMeaning(item.ErrorCode.Value) : "Sin estado PnP disponible" }) { Tag = item };
                 if (item.ErrorCode.GetValueOrDefault() != 0) row.ForeColor = Color.FromArgb(145, 85, 0);
-                hardwareList.Items.Add(row);
+                row.ToolTipText = item.Name; hardwareList.Items.Add(row);
             }
             if (hardwareList.Items.Count > 0) hardwareList.Items[0].Selected = true;
         }

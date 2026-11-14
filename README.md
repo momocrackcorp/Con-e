@@ -1,38 +1,51 @@
-# Con-E v0.2.0 — interfaz gráfica
+# Con-E v0.3.0 — hardware y controladores
 
-Launcher portátil de diagnóstico para Windows 10 y 11. Interfaz nativa Windows Forms, sin navegador integrado ni paquetes externos en ejecución. Usa .NET Framework 4.8: debe estar disponible en el equipo; esta entrega no incluye ni instala el framework. Windows XP es referencia visual, no plataforma compatible.
+Herramienta portátil USB para Windows 10 y 11. Requiere .NET Framework 4.8 disponible en el equipo. Interfaz nativa Windows Forms: no incorpora un navegador, un servicio ni un controlador propio.
 
-## Incluido
+## Interfaz
 
-- Pantalla con tarjetas de equipo, procesador, RAM, almacenamiento, Windows, BIOS y controladores.
-- Barras de RAM y espacio ocupado por unidad, con datos de la última consulta (no monitorización continua).
-- Botón Explicaciones para mostrar u ocultar ayuda sencilla; detalles técnicos y series en diálogos separados.
-- Botón para copiar la serie del equipo.
-- Diseño adaptable con una, dos o tres columnas según el ancho de la ventana.
-- Versión de Windows y fecha de instalación registrada.
-- Fabricante, versión, fecha y serie informada por BIOS; identidad del equipo y placa base por separado.
-- Inventario de controladores y códigos de error PnP. Los dispositivos con incidencias aparecen primero, aunque no tengan controlador firmado; se agrupan por su identificador PnP para evitar duplicados. Una lectura PnP incompleta se indica expresamente.
-- Informe TXT guardado únicamente cuando el usuario lo solicita.
-- Carpeta Tools para herramientas portátiles externas; se abre en el Explorador.
-- Botón de búsqueda web con fabricante y modelo. Esta versión abre el navegador: NO obtiene todavía una reseña automática ni verifica coincidencias con fuentes oficiales.
+- Tarjetas con ilustraciones de componentes dibujadas localmente, indicador circular de RAM y barras de ocupación de unidades.
+- Los detalles de Windows, BIOS, discos e incidencias se despliegan dentro de la misma tarjeta con un segundo clic para ocultarlos. La tarjeta crece y la distribución se reajusta.
+- Ayuda sencilla opcional y diseño de una, dos o tres columnas según el ancho.
+- Se retiraron la fecha de instalación de Windows y el supuesto último formateo. La fecha de BIOS y las fechas de controladores sí se conservan como datos de esos componentes.
 
-El último formateo no puede establecerse de forma fiable a partir de la fecha de instalación. Los valores SMBIOS dependen de lo registrado por el fabricante y pueden contener marcadores o datos incorrectos. Un código PnP cero no certifica que un dispositivo funcione correctamente. Las consultas se ejecutan fuera del hilo de interfaz; cada consulta tiene un tiempo límite WMI de 20 segundos, sujeto al comportamiento del proveedor.
+## Explorador de hardware y controladores
 
-## Compilación con GitHub
+La pestaña incluye un árbol de categorías, una lista de componentes y una ficha de propiedades del componente seleccionado:
 
-El workflow de GitHub Actions compila al recibir cambios o al ejecutarse manualmente desde Actions. Descargar el artefacto `Con-E-v0.2.0-portable`, extraer todo su contenido en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+- Procesadores: modelo, fabricante, núcleos, hilos, socket, frecuencia máxima y cachés informadas.
+- Módulos RAM: ranura, fabricante, pieza, serie, capacidad, velocidad y código de tipo SMBIOS.
+- Placa base y BIOS: modelo, versión, fabricante y series disponibles.
+- Discos físicos: modelo, capacidad, interfaz informada, serie y firmware.
+- Gráficos: modelo, procesador gráfico, controlador y resolución informada.
+- Red, audio, USB y otros dispositivos PnP.
+- Ficha de controlador asociada por ID PnP: proveedor, versión, fecha, INF y firma informada por Windows.
+- Categoría Por revisar para dispositivos con código PnP distinto de cero.
+- Exportación TXT del resumen, hardware, controladores e incidencias de lectura.
 
-## Validación y pruebas pendientes
+## Dispositivos desconocidos
 
-1. GitHub Actions compila y ejecuta una prueba de interfaz con datos simulados: anchos de 1100, 760 y 650 px, explicaciones, navegación, datos ausentes y una captura con escala doble. Capturas y resultado en el artefacto separado `Con-E-interfaz-pruebas`; no se incluyen en el paquete portátil.
-2. Abrir desde USB sin permisos de administrador y comparar modelo, serie, RAM y BIOS con Información del sistema (msinfo32).
-3. Comparar controladores y códigos PnP con Administrador de dispositivos.
-4. Desconectar internet: la lectura local y el informe deben seguir disponibles.
-5. Probar escalas de pantalla de 100%, 150% y 200%, redimensionar y revisar legibilidad.
-6. Exportar TXT al USB y verificar datos y acentos; probar también un USB sin permiso de escritura.
-7. Comprobar comportamiento con WMI bloqueado o información parcial.
-8. Medir tamaño del paquete, RAM y tiempo de inicio; aún no existen mediciones.
+Se consultan dispositivos PnP aunque falte su controlador firmado. Cuando Windows expone sus IDs se muestran HardwareID, CompatibleID e ID de instancia. Se separan códigos PCI VEN/DEV/SUBSYS/REV o USB VID/PID/REV para facilitar su investigación.
 
-## Estado de entrega
+El botón Buscar ID en internet abre el navegador con el primer HardwareID disponible (no usa el ID de instancia como búsqueda). No descarga ni instala controladores. Copiar ficha copia explícitamente todas las propiedades visibles, incluyendo IDs y series cuando existan.
 
-Versión gráfica v0.2.0 preparada para compilación y prueba automatizada en GitHub Actions. La prueba automatizada usa datos simulados y no sustituye la prueba desde USB con datos de un equipo real. No se incluyen herramientas de terceros. La reseña oficial automática del fabricante y un catálogo de accesos individuales del launcher quedan para una siguiente versión.
+No hay todavía una base de nombres PCI/USB integrada. Los códigos no se traducen automáticamente en un fabricante o modelo comercial. Un dispositivo desconocido no revela necesariamente sus prestaciones: no se inventan capacidad, velocidades o características ausentes. Si Windows no enumera un dispositivo ni proporciona un ID, esta versión no puede identificarlo. El inventario se basa en WMI/SMBIOS de Windows; no equivale a todas las funciones de AIDA32, ni incluye sensores o benchmarks.
+
+Las propiedades dependen de lo informado por el sistema y el fabricante. Un código PnP cero no certifica funcionamiento correcto; no encontrar un registro firmado no demuestra por sí solo que falte un controlador. Capacidad en bytes y frecuencias conservan las unidades informadas por WMI. No se deduce la salud de un disco de su espacio libre. Las lecturas de uso se actualizan al pulsar Actualizar, no continuamente.
+
+## Compilar y probar
+
+GitHub Actions compila el ejecutable y ejecuta pruebas de interfaz con datos simulados. Se comprueba expansión y contracción de tarjetas, extracción de IDs PCI/USB, ficha de dispositivo desconocido, navegación, explicaciones, varios anchos y datos ausentes. Las capturas se guardan en `Con-E-interfaz-pruebas` y no se añaden al paquete portátil.
+
+Descargar `Con-E-v0.3.0-portable`, extraer todo en el USB y abrir Con-E.exe. No ejecutar desde dentro del ZIP.
+
+Pendiente de validar en equipos reales: comparación con Administrador de dispositivos y msinfo32, dispositivos sin controlador, distintas escalas DPI de Windows, permisos limitados, funcionamiento desde USB y comportamiento con proveedores WMI bloqueados. La prueba de escala programática no sustituye la validación en una pantalla con DPI real diferente. El tiempo límite WMI depende del comportamiento de cada proveedor.
+
+La búsqueda/reseña automática del fabricante y una base de modelos para resolver IDs siguen pendientes. No se incluyen programas de terceros.
+
+## Referencias técnicas
+
+- [Win32_PnPEntity — Microsoft](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-pnpentity)
+- [Hardware IDs — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/hardware-ids)
+- [Identificadores PCI — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices)
+- [Identificadores USB — Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/standard-usb-identifiers)

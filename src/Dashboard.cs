@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.2.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.3.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -64,7 +64,8 @@ internal sealed partial class MainForm
     FlowLayoutPanel Card(string glyph, string title)
     {
         var card = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(18), Margin = new Padding(7), BackColor = Color.White, Width = 300 };
-        var heading = new Label { Text = glyph + "  " + title, AutoSize = true, Font = new Font(Font, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 0, 14) };
+        var heading = new Label { Text = title, AutoSize = true, Font = new Font(Font, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 0, 14) };
+        card.Controls.Add(new ComponentPicture { Kind = title, Width = 70, Height = 55, AccessibleName = title, Margin = new Padding(0, 0, 0, 10) });
         card.Controls.Add(heading); cards.Add(card); dashboard.Controls.Add(card); return card;
     }
     Label Line(FlowLayoutPanel card, string text, bool prominent = false)
@@ -78,13 +79,25 @@ internal sealed partial class MainForm
     }
     void Meter(FlowLayoutPanel card, double percent, string accessibleName)
     {
-        var meter = new UsageBar { Value = Math.Max(0, Math.Min(100, percent)), Height = 10, Width = 220, AccessibleName = accessibleName + ": " + percent.ToString("0") + " %", Margin = new Padding(0, 4, 0, 12) };
+        var meter = new UsageBar { Value = Math.Max(0, Math.Min(100, percent)), Height = 14, Width = 220, AccessibleName = accessibleName + ": " + percent.ToString("0") + " %", Margin = new Padding(0, 4, 0, 12) };
         card.Controls.Add(meter);
     }
-    void Details(string title, params string[] keys)
+    readonly HashSet<string> expandedCards = new HashSet<string>();
+    void InlineDetails(FlowLayoutPanel card, string title, params string[] keys)
     {
-        var text = string.Join(Environment.NewLine + Environment.NewLine, keys.Select(k => k + ": " + Read(k)));
-        MessageBox.Show(this, text, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var labels = keys.Select(key => Line(card, key + ": " + Read(key))).ToArray();
+        foreach (var label in labels) label.Visible = expandedCards.Contains(title);
+        Button toggle = null;
+        toggle = ActionButton(expandedCards.Contains(title) ? "Ocultar detalles" : title, () =>
+        {
+            bool expanded = !expandedCards.Contains(title);
+            if (expanded) expandedCards.Add(title); else expandedCards.Remove(title);
+            foreach (var label in labels) label.Visible = expanded;
+            toggle.Text = expanded ? "Ocultar detalles" : title;
+            ResizeCards();
+        });
+        toggle.Tag = "expand:" + title;
+        card.Controls.Add(toggle); card.Controls.SetChildIndex(toggle, card.Controls.Count - labels.Length - 1);
     }
     void ToggleHelp()
     {
@@ -109,6 +122,7 @@ internal sealed partial class MainForm
 
             var cpu = Card("⚙", "Procesador");
             Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
+            cpu.Controls.Add(ActionButton("Explorar componentes", () => tabs.SelectedTab = driverPage));
             Help(cpu, "Ejecuta las instrucciones de los programas. Los núcleos permiten repartir tareas.");
 
             var ram = Card("▤", "Memoria RAM");
@@ -117,7 +131,7 @@ internal sealed partial class MainForm
             {
                 double used = current.RamTotalGiB.Value - current.RamAvailableGiB.Value;
                 double percent = used / current.RamTotalGiB.Value * 100;
-                Meter(ram, percent, "RAM utilizada al consultar");
+                ram.Controls.Add(new UsageDial { Value = percent, Width = 140, Height = 100, AccessibleName = "RAM utilizada: " + percent.ToString("0") + " %" });
                 Line(ram, used.ToString("0.0") + " GiB en uso · " + percent.ToString("0") + " %");
                 Line(ram, "Disponible: " + current.RamAvailableGiB.Value.ToString("0.0") + " GiB");
             }
@@ -132,17 +146,17 @@ internal sealed partial class MainForm
                 Meter(disk, 100 * (volume.TotalGiB - volume.FreeGiB) / volume.TotalGiB, "Espacio ocupado " + volume.Name);
                 Line(disk, volume.FreeGiB.ToString("0.0") + " GiB libres de " + volume.TotalGiB.ToString("0.0") + " GiB");
             }
-            disk.Controls.Add(ActionButton("Ver discos físicos", () => Details("Discos físicos", "Disco físico")));
+            InlineDetails(disk, "Ver discos físicos", "Disco físico");
             Help(disk, "La barra indica espacio ocupado. No evalúa la salud del disco. Cada unidad puede ser una partición de un mismo disco físico.");
 
             var windows = Card("⊞", "Windows");
             Line(windows, Read("Windows"), true); Line(windows, Read("Arquitectura de Windows"));
-            windows.Controls.Add(ActionButton("Instalación y formateo", () => Details("Windows", "Versión / compilación", "Instalación registrada por Windows", "Último formateo", "Nota sobre instalación")));
-            Help(windows, "La fecha de instalación no acredita un formateo: puede cambiar con una reinstalación o actualización.");
+            InlineDetails(windows, "Ver detalles de Windows", "Versión / compilación", "Tipo de sistema");
+            Help(windows, "Aquí puedes consultar la versión y arquitectura de Windows.");
 
             var bios = Card("▦", "BIOS y placa base");
             Line(bios, Read("Versión de BIOS"), true); Line(bios, Read("Fabricante de BIOS")); Line(bios, "Fecha: " + Read("Fecha de BIOS"));
-            bios.Controls.Add(ActionButton("Ver modelo y números de serie", () => Details("BIOS y placa base", "Fabricante de placa base", "Modelo de placa base", "Serie de placa base", "Serie informada por BIOS")));
+            InlineDetails(bios, "Ver modelo y números de serie", "Fabricante de placa base", "Modelo de placa base", "Serie de placa base", "Serie informada por BIOS");
             Help(bios, "La BIOS inicia el hardware antes de cargar Windows. Las series del equipo y de la placa pueden ser diferentes.");
 
             var driver = Card("⚒", "Controladores");
@@ -156,7 +170,9 @@ internal sealed partial class MainForm
             {
                 var warning = Card("!", "Lectura parcial");
                 Line(warning, current.Warnings.Count + " consulta(s) con datos incompletos", true);
-                warning.Controls.Add(ActionButton("Ver incidencias de lectura", () => MessageBox.Show(this, string.Join(Environment.NewLine + Environment.NewLine, current.Warnings), "Incidencias de lectura")));
+                const string key = "Incidencias de lectura";
+                current.Summary.RemoveAll(row => row[0] == key); current.Summary.Add(new[] { key, string.Join(Environment.NewLine, current.Warnings) });
+                InlineDetails(warning, "Ver incidencias de lectura", key);
             }
         }
         finally { dashboard.ResumeLayout(true); ResizeCards(); }
@@ -181,6 +197,7 @@ internal sealed partial class MainForm
                 {
                     if (child is Label) child.MaximumSize = new Size(inner, 0);
                     else if (child is UsageBar) child.Width = inner;
+                    else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
                 }
             }
@@ -201,7 +218,26 @@ internal sealed partial class MainForm
                 new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
             form.current.Volumes.Add(new VolumeInfo { Name = "C:", TotalGiB = 500, FreeGiB = 320 });
             form.current.ProblemDevices.Add("audio");
-            form.RenderDashboard(); form.Show(); Application.DoEvents();
+            var unknown = new HardwareItem { Name = "Dispositivo PCI sin identificar (prueba)", Category = "Otros dispositivos", DeviceId = @"PCI\VEN_1234&DEV_5678\INSTANCIA", SearchId = @"PCI\VEN_1234&DEV_5678&SUBSYS_11112222&REV_01", ErrorCode = 28 };
+            ParseIdentifiers(unknown);
+            if (unknown.Properties["Fabricante PCI (VEN)"] != "1234" || unknown.Properties["Dispositivo PCI (DEV)"] != "5678" || unknown.Properties["Subsistema PCI"] != "11112222") throw new InvalidOperationException("Lectura de IDs PCI incorrecta");
+            var usb = new HardwareItem { SearchId = @"USB\VID_1234&PID_ABCD&REV_0100" }; ParseIdentifiers(usb);
+            if (usb.Properties["Fabricante USB (VID)"] != "1234" || usb.Properties["Producto USB (PID)"] != "ABCD") throw new InvalidOperationException("Lectura de IDs USB incorrecta");
+            unknown.Properties["Estado PnP"] = PnpMeaning(28);
+            unknown.Properties["IDs de hardware"] = unknown.SearchId;
+            unknown.Properties["Controlador"] = "No instalado (ejemplo)";
+            form.current.Hardware.Add(unknown);
+            form.RenderDashboard(); form.RenderHardwareBrowser(); form.Show(); Application.DoEvents();
+            var biosCard = form.cards.First(c => c.Controls.OfType<Button>().Any(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie"));
+            var expand = biosCard.Controls.OfType<Button>().Single(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie");
+            int collapsedHeight = biosCard.Height;
+            expand.PerformClick(); Application.DoEvents();
+            if (biosCard.Height <= collapsedHeight || expand.Text != "Ocultar detalles") throw new InvalidOperationException("La tarjeta no se expande");
+            form.dashboard.ScrollControlIntoView(biosCard); Application.DoEvents();
+            using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "detalles-expandidos.png"), ImageFormat.Png); }
+            expand.PerformClick(); Application.DoEvents();
+            if (biosCard.Height != collapsedHeight) throw new InvalidOperationException("La tarjeta no se contrae");
+            form.dashboard.AutoScrollPosition = Point.Empty;
             foreach (int width in new[] { 1100, 760, 650 })
             {
                 form.Width = width; form.ResizeCards(); Application.DoEvents();
@@ -216,10 +252,15 @@ internal sealed partial class MainForm
             if (form.helpLabels.Any(l => !l.Visible)) throw new InvalidOperationException("No se muestran las explicaciones");
             form.tabs.SelectedTab = form.driverPage; Application.DoEvents();
             if (form.tabs.SelectedTab != form.driverPage) throw new InvalidOperationException("Navegación incorrecta");
+            form.ShowHardwareCategory("Por revisar"); Application.DoEvents();
+            if (form.hardwareList.Items.Count != 1) throw new InvalidOperationException("Dispositivo desconocido ausente");
+            form.hardwareList.Items[0].Selected = true; form.hardwareList.Focus(); Application.DoEvents();
+            if (form.selectedHardware != unknown || form.hardwareDetails.Items.Count == 0) throw new InvalidOperationException("Ficha de hardware ausente");
+            using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "hardware-desconocido.png"), ImageFormat.Png); }
             form.tabs.SelectedIndex = 0; form.current = new Snapshot(); form.RenderDashboard(); Application.DoEvents();
             form.Scale(new SizeF(2, 2)); form.ResizeCards(); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-escala-doble.png"), ImageFormat.Png); }
-            File.WriteAllText(Path.Combine(dir, "resultado.txt"), "OK: diseño adaptable, explicaciones, navegación y datos ausentes. Datos simulados; prueba real por USB pendiente.");
+            File.WriteAllText(Path.Combine(dir, "resultado.txt"), "OK: tarjetas expandibles y plegables, IDs PCI/USB, hardware desconocido, diseño adaptable, explicaciones, navegación y datos ausentes. Datos simulados; prueba real por USB pendiente.");
             form.Close();
         }
     }

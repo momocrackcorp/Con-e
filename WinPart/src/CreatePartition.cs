@@ -20,7 +20,7 @@ internal sealed partial class MainForm
         return end>start?end-start:0;
     }
     internal static bool CanCreate(DiskLayout disk,PartitionLayout gap)
-    {return disk!=null&&gap!=null&&disk.Complete&&disk.Style=="GPT"&&!string.IsNullOrWhiteSpace(disk.UniqueId)&&disk.UniqueId!="No disponible"&&gap.Gap&&CreateCapacity(disk,gap)>=16UL*1048576;}
+    {return disk!=null&&gap!=null&&disk.Complete&&(disk.Style=="GPT"||(disk.Style=="MBR"&&disk.Size<=2UL*1024*1073741824&&disk.Partitions.Count<4&&disk.Partitions.All(p=>p.Primary==true)))&&!string.IsNullOrWhiteSpace(disk.UniqueId)&&disk.UniqueId!="No disponible"&&gap.Gap&&CreateCapacity(disk,gap)>=16UL*1048576;}
     Control BuildCreateButton()
     {
         createPartition.Click+=(s,e)=>{if(selectedEditDisk!=null&&selectedEditPartition!=null)PrepareCreate(selectedEditDisk,selectedEditPartition);};return createPartition;
@@ -65,15 +65,16 @@ internal sealed partial class MainForm
     }
     static void ValidateCreateSyntax(PendingResize c)
     {
-        if(!c.Create||!CanCreate(c.Disk,c.Part)||c.StartOffset!=CreateStart(c.Part)||c.Bytes%1048576!=0||c.Bytes>CreateCapacity(c.Disk,c.Part))throw new InvalidOperationException("La nueva partición no cabe en el intervalo sin asignar o el disco no es GPT compatible.");
+        if(!c.Create||!CanCreate(c.Disk,c.Part)||c.StartOffset!=CreateStart(c.Part)||c.Bytes%1048576!=0||c.Bytes>CreateCapacity(c.Disk,c.Part))throw new InvalidOperationException("La nueva partición no cabe en el intervalo sin asignar o el disco no es GPT/MBR compatible (MBR: hasta cuatro primarias y 2 TiB).");
         ValidateFileSystemSize(c.FileSystem,c.Bytes);
         if(c.NewLabel==null||c.NewLabel.Length>11||c.NewLabel.Any(ch=>ch<32||"\\/:*?\"<>|".Contains(ch)))throw new InvalidOperationException("La etiqueta admite hasta 11 caracteres, sin símbolos de ruta ni control.");
     }
     static DiskLayout ValidateCreate(PendingResize c)
     {
         ValidateCreateSyntax(c);
-        var disk=ReadDiskLayouts(new Snapshot()).SingleOrDefault(d=>d.Number==c.Disk.Number&&d.UniqueId==c.Disk.UniqueId&&d.Size==c.Disk.Size&&d.Complete&&d.Style=="GPT");
+        var disk=ReadDiskLayouts(new Snapshot()).SingleOrDefault(d=>d.Number==c.Disk.Number&&d.UniqueId==c.Disk.UniqueId&&d.Size==c.Disk.Size&&d.Complete&&d.Style==c.Disk.Style);
         if(disk==null)throw new InvalidOperationException("El disco cambió o ya no está disponible. Actualiza el mapa.");
+        if(!CanCreate(disk,c.Part))throw new InvalidOperationException("El esquema MBR/GPT o las entradas disponibles cambiaron.");
         if(!disk.Segments().Any(g=>g.Gap&&g.Offset==c.Part.Offset&&g.Size==c.Part.Size))throw new InvalidOperationException("El espacio sin asignar cambió. No se creará la partición; prepara de nuevo la operación.");
         return disk;
     }
@@ -82,7 +83,7 @@ internal sealed partial class MainForm
         ValidateCreate(c);
         string number=c.Disk.Number.ToString(CultureInfo.InvariantCulture),offset=c.StartOffset.ToString(CultureInfo.InvariantCulture),bytes=c.Bytes.ToString(CultureInfo.InvariantCulture);
         // The provider rejects overlapping extents. Select an exact disk identity and exact offset, never a default disk.
-        string script="$disk=Get-Disk -Number "+number+" -ErrorAction Stop; if($disk.UniqueId -ne "+PsLiteral(c.Disk.UniqueId)+" -or $disk.Size -ne "+c.Disk.Size.ToString(CultureInfo.InvariantCulture)+" -or $disk.PartitionStyle -ne 'GPT' -or $disk.IsOffline -or $disk.IsReadOnly){throw 'El disco cambió, está desconectado o protegido'}; $part=New-Partition -DiskNumber $disk.Number -Offset "+offset+" -Size "+bytes+" -AssignDriveLetter -GptType '{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}' -ErrorAction Stop; ";
+        string script="$disk=Get-Disk -Number "+number+" -ErrorAction Stop; if($disk.UniqueId -ne "+PsLiteral(c.Disk.UniqueId)+" -or $disk.Size -ne "+c.Disk.Size.ToString(CultureInfo.InvariantCulture)+" -or $disk.PartitionStyle -ne "+PsLiteral(c.Disk.Style)+" -or $disk.IsOffline -or $disk.IsReadOnly){throw 'El disco cambió, está desconectado o protegido'}; $part=New-Partition -DiskNumber $disk.Number -Offset "+offset+" -Size "+bytes+" -AssignDriveLetter "+(c.Disk.Style=="GPT"?"-GptType '{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}'":"-MbrType IFS")+" -ErrorAction Stop; ";
         // Separate creation from formatting so a format failure is reported without silently removing the new partition.
         RunStorageScript(script);
         if(c.FileSystem!="RAW")

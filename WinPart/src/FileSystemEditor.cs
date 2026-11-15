@@ -16,7 +16,7 @@ internal sealed partial class MainForm
     DiskLayout formatDisk;PartitionLayout formatPart;string formatVolumeId;
     static bool CanFormat(DiskLayout disk,PartitionLayout p)
     {
-        if(!disk.Complete||disk.UniqueId==""||disk.UniqueId=="No disponible"||p.Gap||p.Type!="Datos básicos"||p.Letter.Length!=1||p.IsBoot||p.IsSystem)return false;
+        if(!disk.Complete||disk.UniqueId==""||disk.UniqueId=="No disponible"||p.Gap||(p.Type!="Datos básicos"&&p.Type!="Datos básicos MBR")||p.Letter.Length!=1||p.IsBoot||p.IsSystem)return false;
         string root=p.Letter+":";
         return !root.Equals(System.IO.Path.GetPathRoot(Environment.SystemDirectory).TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)&&!root.Equals(System.IO.Path.GetPathRoot(Application.ExecutablePath).TrimEnd('\\'),StringComparison.OrdinalIgnoreCase);
     }
@@ -27,6 +27,7 @@ internal sealed partial class MainForm
         stage.Click+=(s,e)=>{if(formatDisk!=null&&formatChoice.SelectedItem!=null)StageFormat(formatDisk,formatPart,Convert.ToString(formatChoice.SelectedItem),formatVolumeId);};
         formatButton.Click+=async(s,e)=>
         {
+            CloseResizeEditor();
             if(selectedEditDisk==null||selectedEditPartition==null)return;
             var disk=selectedEditDisk;var part=selectedEditPartition;
             try
@@ -76,7 +77,7 @@ internal sealed partial class MainForm
     }
     void StageFormat(DiskLayout disk,PartitionLayout part,string fs,string volumeId)
     {
-        pendingResizes.RemoveAll(p=>!p.IsVirtual&&!p.Create&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        pendingResizes.RemoveAll(p=>!p.IsVirtual&&!p.Create&&!p.Reset&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
         pendingResizes.Add(new PendingResize {Disk=disk,Part=part,FileSystem=fs,VolumeId=volumeId});UpdatePending();RenderDiskMaps();
         inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;
     }

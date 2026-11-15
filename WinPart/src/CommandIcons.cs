@@ -59,7 +59,7 @@ internal sealed partial class MainForm
     readonly ToolTip commandTips=new ToolTip {AutoPopDelay=12000,InitialDelay=350,ReshowDelay=100};
     void StyleCommand(Button button,string text,string glyph,Color color,string tip)
     {
-        button.Text=text;button.AutoSize=false;button.Size=new Size(104,82);button.Margin=new Padding(2);button.Padding=new Padding(3);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.FlatAppearance.MouseOverBackColor=Color.FromArgb(231,240,255);button.FlatAppearance.MouseDownBackColor=Color.FromArgb(213,228,250);button.BackColor=Color.White;button.ForeColor=Color.FromArgb(32,47,67);button.TextImageRelation=TextImageRelation.ImageAboveText;button.ImageAlign=ContentAlignment.MiddleCenter;button.TextAlign=ContentAlignment.MiddleCenter;button.Font=new Font(Font.FontFamily,9f);button.AccessibleName=text;commandTips.SetToolTip(button,tip);
+        button.Text=text;button.AutoSize=false;button.Size=new Size(96,82);button.Margin=new Padding(2);button.Padding=new Padding(3);button.FlatStyle=FlatStyle.Flat;button.FlatAppearance.BorderSize=0;button.FlatAppearance.MouseOverBackColor=Color.FromArgb(231,240,255);button.FlatAppearance.MouseDownBackColor=Color.FromArgb(213,228,250);button.BackColor=Color.White;button.ForeColor=Color.FromArgb(32,47,67);button.TextImageRelation=TextImageRelation.ImageAboveText;button.ImageAlign=ContentAlignment.MiddleCenter;button.TextAlign=ContentAlignment.MiddleCenter;button.Font=new Font(Font.FontFamily,9f);button.AccessibleName=text;commandTips.SetToolTip(button,tip);
         Action repaint=()=>{var previous=button.Image;button.Image=CommandIcons.Make(glyph,color,Math.Max(32,(int)(36*DeviceDpi/96f)));if(previous!=null)previous.Dispose();};repaint();
         DpiChanged+=(s,e)=>repaint();button.Disposed+=(s,e)=>{if(button.Image!=null)button.Image.Dispose();};
     }
@@ -74,8 +74,9 @@ internal sealed partial class MainForm
         StyleCommand(virtualButton,"Disco virtual ▾","vhd",Color.FromArgb(128,80,190),"Crear, conectar o desconectar un archivo VHD de prueba.");
         StyleCommand(applyPending,applyPending.Text,"apply",Color.FromArgb(31,147,85),"Revisar la cola, confirmar y solicitar administrador si hace falta. La ventana permanece abierta.");
         StyleCommand(discardPending,"Descartar","discard",Color.FromArgb(133,111,80),"Quitar las operaciones pendientes sin modificar discos.");
+        StyleCommand(advancedButton,"Avanzadas ▾","system",Color.FromArgb(195,95,22),"Eliminar tipos protegidos o sin letra y vaciar/preparar GPT/MBR en discos ajenos al Windows actual.");
         StyleCommand(about,"Acerca de","about",Color.FromArgb(80,128,180),"Información, licencia GPL y créditos de WinPart.");
-        actions.Controls.AddRange(new Control[]{refresh,createPartition,deletePartition,formatButton,resizePartition,virtualButton,applyPending,discardPending,about});
+        actions.Controls.AddRange(new Control[]{refresh,createPartition,deletePartition,formatButton,resizePartition,virtualButton,advancedButton,applyPending,discardPending,about});
         Disposed+=(s,e)=>commandTips.Dispose();
     }
 }

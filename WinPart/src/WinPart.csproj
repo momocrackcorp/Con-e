@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net48</TargetFramework><UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>WinPart</AssemblyName><Version>0.7.0</Version><LangVersion>latest</LangVersion>
+    <ApplicationIcon Condition="Exists('app.ico')">app.ico</ApplicationIcon>
+    <AssemblyName>WinPart</AssemblyName><Version>0.8.0</Version><LangVersion>latest</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget><Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup><Reference Include="System.Management" /><Reference Include="System.Xml.Linq" /></ItemGroup>

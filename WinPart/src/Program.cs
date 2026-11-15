@@ -24,6 +24,7 @@ internal static class Program
         }
         var arguments=Environment.GetCommandLineArgs();int apply=Array.IndexOf(arguments,"--apply-plan");
         if(apply>=0){if(apply+1>=arguments.Length){Environment.ExitCode=2;return;}Environment.ExitCode=MainForm.RunElevatedHelper(arguments[apply+1]);return;}
+        using(var notice=new UsageNotice())if(notice.ShowDialog()!=DialogResult.OK)return;
         Application.Run(new MainForm());
     }
 }
@@ -35,7 +36,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.7.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.8.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -48,7 +49,7 @@ internal sealed partial class MainForm : Form
     {var list=new ListView {Dock=DockStyle.Fill,View=View.Details,FullRowSelect=true,HideSelection=false,MultiSelect=false};foreach(var c in columns)list.Columns.Add(c,180);return list;}
     async Task RefreshData()
     {
-        if(applyingChanges)return;actions.Enabled=false;pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
+        if(applyingChanges)return;CloseResizeEditor();actions.Enabled=false;pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
         status.Text="Leyendo discos…";
         try{var snapshot=new Snapshot();var data=await Task.Run(()=>ReadDiskLayouts(snapshot));if(IsDisposed)return;diskLayouts.Clear();diskLayouts.AddRange(data);RenderDiskMaps();status.Text=snapshot.Warnings.Count==0?data.Count+" disco(s) · selecciona una partición.":string.Join(" | ",snapshot.Warnings);}
         catch(Exception ex){status.Text=ex.Message;}finally{if(!IsDisposed)actions.Enabled=true;}
@@ -63,8 +64,13 @@ internal sealed partial class MainForm : Form
             if(FileSystemPalette.Get("NTFS")==FileSystemPalette.Get("exFAT")||FileSystemPalette.Used==FileSystemPalette.Unused)throw new Exception("Paleta sin diferenciación");
             var boxes=new PartitionStrip(disk,disk.Segments()){Width=900,Height=70}.Blocks();if(boxes.Count!=disk.Segments().Count||boxes.Sum(b=>b.Width)!=900)throw new Exception("Mapa de bloques inconsistente");
             form.diskLayouts.Add(disk);form.Show();form.RenderDiskMaps();Application.DoEvents();
+            form.ConfigureEditor(disk,p,100UL*1073741824,400UL*1073741824);
+            if(form.resizePanel.Parent==null||!ReferenceEquals(form.resizePanel.Parent.Tag,disk))throw new Exception("Editor no está en la tarjeta del disco elegido");
+            string editorDir=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(editorDir,"editor-bajo-disco.png"),ImageFormat.Png);}
+            form.cancelEdit.PerformClick();if(form.resizePanel.Parent!=null||form.pendingResizes.Count!=0)throw new Exception("No cancela edición sin pendientes");
             form.ConfigureEditor(disk,p,100UL*1073741824,400UL*1073741824);form.editSize.Value=160*1024;
-            form.inlineEditor.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio").PerformClick();Application.DoEvents();
+            form.resizePanel.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio").PerformClick();Application.DoEvents();
             if(form.pendingResizes.Count!=1||p.Size!=200UL*1073741824)throw new Exception("Fallo de vista previa");
             var encoded=EncodeOperations(form.pendingResizes);var decoded=DecodeOperations(encoded);
             if(decoded.Count!=1||decoded[0].Disk.UniqueId!=disk.UniqueId||decoded[0].Part.Offset!=p.Offset||decoded[0].Bytes!=160UL*1073741824)throw new Exception("El auxiliar pierde identidad o tamaño del plan");
@@ -90,7 +96,7 @@ internal sealed partial class MainForm : Form
             if(newPlan.Count!=1||!newPlan[0].Create||newPlan[0].FileSystem!="exFAT"||disk.Partitions.Count!=2)throw new Exception("Preparación de nueva partición incorrecta");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"nueva-particion-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descarte de nueva partición modifica datos");
-            if(form.actions.Controls.OfType<Button>().Count()!=9||form.deletePartition.Image==null||form.createPartition.Image==null||form.deletePartition.TextImageRelation!=TextImageRelation.ImageAboveText)throw new Exception("Barra de iconos incompleta");
+            if(form.actions.Controls.OfType<Button>().Count()!=10||form.deletePartition.Image==null||form.createPartition.Image==null||form.deletePartition.TextImageRelation!=TextImageRelation.ImageAboveText)throw new Exception("Barra de iconos incompleta");
             p.IsBoot=true;if(CanDelete(disk,p))throw new Exception("Permite eliminar arranque");p.IsBoot=false;p.IsSystem=true;if(CanDelete(disk,p))throw new Exception("Permite eliminar sistema");p.IsSystem=false;
             var protectedPart=new PartitionLayout {Number=3,Letter="Z",Type="EFI"};if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar EFI");protectedPart.Type="Reservada MSR";if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar MSR");protectedPart.Type="Recuperación";if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar recuperación");
             var mbr=new DiskLayout {Style="MBR"};var role=new PartitionLayout {Primary=true};if(CommandIcons.Role(mbr,role)!="Primaria MBR")throw new Exception("Icono primaria incorrecto");role.Primary=false;if(CommandIcons.Role(mbr,role)!="Lógica MBR"||CommandIcons.ForPartition(mbr,role)!="logical")throw new Exception("Icono lógica incorrecto");if(CommandIcons.Role(disk,p)!="Partición GPT"||CommandIcons.DiskKind(disk)!="VHD / imagen virtual")throw new Exception("Clasificación GPT/VHD incorrecta");
@@ -100,6 +106,15 @@ internal sealed partial class MainForm : Form
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-eliminar-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descartar eliminación modifica datos");
             form.Size=new Size(730,650);form.PerformLayout();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-estrecha.png"),ImageFormat.Png);}
+            var foreign=new PartitionLayout {Number=7,Offset=400UL*1073741824,Size=32UL*1048576,Type="EFI"};
+            if(!CanAdvancedDelete(disk,foreign))throw new Exception("Bloquea EFI ajena al Windows actual en interfaz avanzada");
+            form.StageAdvanced(new PendingResize {Advanced=true,Delete=true,Disk=disk,Part=foreign});
+            var ap=DecodeOperations(EncodeOperations(form.pendingResizes));if(ap.Count!=1||!ap[0].Advanced||ap[0].Part.Letter!="")throw new Exception("Pierde eliminación sin letra");
+            form.discardPending.PerformClick();form.SelectDisk(disk);form.StageReset("MBR");
+            var rp=DecodeOperations(EncodeOperations(form.pendingResizes));if(rp.Count!=1||!rp[0].Reset||rp[0].ResetStyle!="MBR")throw new Exception("Pierde operación disco completo");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"avanzadas-pendiente.png"),ImageFormat.Png);}
+            form.discardPending.PerformClick();
+            using(var notice=new UsageNotice()){notice.Show();Application.DoEvents();using(var image=new Bitmap(notice.Width,notice.Height)){notice.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"aviso-inicial.png"),ImageFormat.Png);}notice.Close();}
             var real=ReadDiskLayouts(new Snapshot());if(!real.Any(d=>d.Partitions.Count>0))throw new Exception("La consulta real no obtuvo particiones");
             File.WriteAllText(Path.Combine(dir,"resultado.txt"),"OK: aplicación independiente, cola visual, descarte y lectura real.");form.Close();
         }

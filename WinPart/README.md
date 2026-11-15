@@ -1,4 +1,4 @@
-# WinPart v0.7.0 (nombre provisional)
+# WinPart v0.8.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -14,7 +14,7 @@ Mover, copiar particiones y más sistemas de archivos. No es un port completo de
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.7.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.8.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
 ## Sistemas de archivos v0.4.0
@@ -82,3 +82,20 @@ Se bloquean Windows, sistema/arranque, EFI, MSR, recuperación, la partición qu
 Los encabezados indican VHD/imagen respaldada por archivo (BusType 15), disco virtual (14), USB (7) o tipo no informado cuando corresponde. Las filas muestran icono de GPT, primaria/lógica MBR (Win32_DiskPartition.PrimaryPartition, asociada por disco y offset), sistema/EFI/MSR, recuperación o espacio sin asignar. GPT no se etiqueta como primaria/lógica MBR. Se mantiene el color del sistema de archivos como indicador complementario.
 
 Las pruebas usan un VHD propio desechable: crear cuatro particiones, eliminar la exFAT, verificar el hueco resultante y que el contenido de otra partición no cambia. Se comprueban protecciones, serialización, preparación/descarte sin escritura y clasificación de iconos. Las capturas incluyen barra normal y estrecha.
+
+
+## Operaciones avanzadas v0.8.0
+
+La barra **Avanzadas** permite preparar (1) eliminación de una partición seleccionada aunque no tenga letra o sea EFI, MSR, recuperación o un tipo desconocido por Windows; y (2) vaciar el disco completo y preparar una tabla GPT o MBR. No necesita interpretar ni descifrar el sistema de archivos. La creación se amplía a primarias MBR (hasta cuatro, sin contenedores extendidos; límite conservador de 2 TiB) y la edición de datos NTFS/formatos Windows reconoce MBR además de GPT.
+
+No hay un explorador de archivos Linux/macOS ni desbloqueo de cifrado integrado. Eliminar una partición cifrada no permite leer sus archivos y no es un borrado seguro. El motor no identifica de forma exhaustiva todos los esquemas de cifrado, RAID, LVM o contenedores. Mover/copiar particiones, crear lógicas MBR y redimensionar formatos ajenos al motor nativo siguen pendientes.
+
+La cola describe claramente partición frente a DISCO COMPLETO. Preparar o descartar no escribe. Vaciar sustituye las operaciones pendientes del mismo disco; debe aplicarse por separado de otras operaciones de ese disco. Se solicita administrador sólo al aplicar; la ventana principal continúa abierta. El resultado de DiskPart se comprueba mediante una lectura nueva del esquema, no por textos localizados ni sólo por el código de salida.
+
+Antes de ejecutar se revalidan número, identidad persistente, capacidad y estilo del disco; para eliminar también número, offset, tamaño y tipo de partición. Se bloquean discos usados por el Windows actual para sistema/arranque, WinPart, paginación o rutas de volcado activas. Estos límites se aplican también a discos USB desde los que haya arrancado Windows. Dispositivos desconectados o de sólo lectura requieren resolver su estado antes. No se eliminan volúmenes de discos dinámicos/Storage Spaces con un motor de discos básicos.
+
+La interfaz permite seleccionar un disco vacío pulsando su encabezado. El editor de tamaño aparece dentro de su tarjeta, con **Cancelar edición** siempre disponible aunque no haya pendientes. Cerrar edición cancela la propuesta no añadida; para quitar operaciones ya preparadas se usa Descartar. Se incorpora un icono original al ejecutable y una pantalla inicial de uso técnico, advertencia de pérdida de datos y ausencia de garantía conforme a COPYING.
+
+Pruebas: VHD exclusivo desechable, eliminación EFI/recuperación/MSR/tipo Linux sin letra conservando un archivo en otra partición; preparación MBR, creación NTFS MBR y escritura; preparación GPT; rechazo del disco usado por Windows; serialización de planes; edición local y cancelación sin cola. Los tests no certifican todos los controladores USB ni todos los cifrados.
+
+Para reconstruir con el icono en Windows: ejecutar `./WinPart/build-icon.ps1` antes de `dotnet build WinPart/src/WinPart.csproj -c Release`. El paquete fuente incluye el script y el icono generado.

@@ -113,8 +113,13 @@ internal sealed class SensorClient : IDisposable
             security.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User,PipeAccessRights.FullControl,AccessControlType.Allow));
             security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid,null),PipeAccessRights.FullControl,AccessControlType.Allow));
             local=new NamedPipeServerStream(name,PipeDirection.InOut,1,PipeTransmissionMode.Byte,PipeOptions.Asynchronous,4096,4096,security);pipe=local;
-            using(var worker=Process.Start(new ProcessStartInfo {FileName=System.Windows.Forms.Application.ExecutablePath,Arguments="--sensor-worker "+name,UseShellExecute=true,Verb=elevated?"runas":"",WindowStyle=ProcessWindowStyle.Hidden})){}
-            var connection=local.WaitForConnectionAsync(token);if(await Task.WhenAny(connection,Task.Delay(30000,token))!=connection)throw new TimeoutException("El módulo no respondió o se canceló el permiso.");await connection;
+            using(var worker=Process.Start(new ProcessStartInfo {FileName=System.Windows.Forms.Application.ExecutablePath,Arguments="--sensor-worker "+name,UseShellExecute=elevated,Verb=elevated?"runas":"",CreateNoWindow=!elevated,RedirectStandardError=!elevated,WindowStyle=ProcessWindowStyle.Hidden}))
+            {
+                var connection=local.WaitForConnectionAsync(token);var exited=Task.Run(()=>worker.WaitForExit());
+                var completed=await Task.WhenAny(connection,Task.Delay(30000,token),exited);
+                if(completed==exited)throw new IOException("El lector terminó (código "+worker.ExitCode+"). "+(!elevated?await worker.StandardError.ReadToEndAsync():""));
+                if(completed!=connection)throw new TimeoutException("El módulo no respondió o se canceló el permiso.");await connection;
+            }
             using(var reader=new StreamReader(local))using(var writer=new StreamWriter(local){AutoFlush=true})
             {
                 var json=new JavaScriptSerializer {MaxJsonLength=2097152};

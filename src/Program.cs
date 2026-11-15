@@ -16,7 +16,10 @@ internal static class Program
     static void Main()
     {
         var args=Environment.GetCommandLineArgs();
-        if(args.Length==3&&args[1]=="--sensor-worker"){Environment.ExitCode=SensorWorker.Run(args[2]);return;}
+        if(args.Length==3&&args[1]=="--sensor-worker"){
+            try{Environment.ExitCode=SensorWorker.Run(args[2]);}catch(Exception ex){Console.Error.WriteLine(ex);Environment.ExitCode=3;}
+            return;
+        }
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         if (Environment.GetCommandLineArgs().Contains("--smoke-test")) { try { MainForm.SmokeTest(); } catch(Exception ex) { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa")); File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","error.txt"),ex.ToString()); Environment.ExitCode=1; } return; }

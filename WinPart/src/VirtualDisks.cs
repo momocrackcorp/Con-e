@@ -54,8 +54,8 @@ internal sealed partial class MainForm
             editingDisk=null;editingPartition=null;formatEditor.Visible=false;
             foreach(Control control in inlineEditor.Controls)control.Visible=control==pendingList;
             inlineEditor.Visible=true;partitionInfo.Visible=true;
-            partitionInfo.Text=change.Description+Environment.NewLine+"Pendiente: no se ha creado, conectado ni desconectado ningún disco. Revisa y pulsa Aplicar.";
             UpdatePending();RenderDiskMaps();
+            partitionInfo.Text=change.Description+Environment.NewLine+"Pendiente: no se ha creado, conectado ni desconectado ningún disco. Revisa y pulsa Aplicar.";
         }
         catch(Exception ex){MessageBox.Show(this,ex.Message,"Disco virtual",MessageBoxButtons.OK,MessageBoxIcon.Information);}
     }

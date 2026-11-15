@@ -22,6 +22,8 @@ internal static class Program
             try {if(Environment.GetCommandLineArgs().Contains("--resize-test"))MainForm.ResizeIntegrationTest();else MainForm.SmokeTest();}
             catch(Exception ex){File.WriteAllText(Path.Combine(qa,"error.txt"),ex.ToString());File.WriteAllText(Path.Combine(qa,"resize-error.txt"),ex.ToString());Environment.ExitCode=1;}return;
         }
+        var arguments=Environment.GetCommandLineArgs();int apply=Array.IndexOf(arguments,"--apply-plan");
+        if(apply>=0){if(apply+1>=arguments.Length){Environment.ExitCode=2;return;}Environment.ExitCode=MainForm.RunElevatedHelper(arguments[apply+1]);return;}
         Application.Run(new MainForm());
     }
 }
@@ -33,7 +35,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.3.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="WinPart · Gestor de particiones · v0.4.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -64,6 +66,9 @@ internal sealed partial class MainForm : Form
             form.ConfigureEditor(disk,p,100UL*1073741824,400UL*1073741824);form.editSize.Value=160*1024;
             form.inlineEditor.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio").PerformClick();Application.DoEvents();
             if(form.pendingResizes.Count!=1||p.Size!=200UL*1073741824)throw new Exception("Fallo de vista previa");
+            var encoded=EncodeOperations(form.pendingResizes);var decoded=DecodeOperations(encoded);
+            if(decoded.Count!=1||decoded[0].Disk.UniqueId!=disk.UniqueId||decoded[0].Part.Offset!=p.Offset||decoded[0].Bytes!=160UL*1073741824)throw new Exception("El auxiliar pierde identidad o tamaño del plan");
+            bool rejected=false;try{DecodeOperations("invalid-base64");}catch{rejected=true;}if(!rejected)throw new Exception("Plan inválido aceptado");
             string dir=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"winpart.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0)throw new Exception("Fallo al descartar");

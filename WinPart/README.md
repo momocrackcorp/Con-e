@@ -1,4 +1,4 @@
-# WinPart v0.3.0 (nombre provisional)
+# WinPart v0.4.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -14,10 +14,10 @@ Crear, eliminar, formatear, mover, copiar particiones y más sistemas de archivo
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.3.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.4.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
-## Sistemas de archivos v0.3.0
+## Sistemas de archivos v0.4.0
 
 Columnas Partición, Sistema de archivos, Montaje, Etiqueta, Tamaño, Usado, Libre e Indicadores. Windows proporciona tamaños de volúmenes con letra; las particiones sin volumen consultable muestran datos desconocidos.
 
@@ -30,10 +30,21 @@ Sólo hay una operación pendiente por partición: preparar un formateo sustituy
 Prueba en VHD desechable: reducir/ampliar NTFS conservando archivo; formatear exFAT y verificar desaparición del archivo y nuevo formato; formatear de nuevo NTFS y verificar escritura. No se realizan estas pruebas sobre datos del usuario.
 
 
-## Mapa visual y software libre v0.3.0
+## Mapa visual y software libre v0.4.0
 
 Bordes de sistemas de archivos con la paleta adaptada de GParted, interior amarillo para usado, blanco para libre y rayado para ocupación desconocida. Selección en naranja, identificadores y tamaños en cada bloque cuando caben; la tabla conserva la información de particiones pequeñas. Las particiones diminutas se ensanchan en pantalla para ser seleccionables; las proporciones visuales son aproximadas y los valores de tabla son los datos leídos.
 
 Dos particiones NTFS comparten color de sistema de archivos, como en GParted. Se distinguen por letra, tamaño, posición y distribución usado/libre. El color no se asigna arbitrariamente por unidad. No se inventa el sistema de archivos de EFI o recuperación: se intenta consultar el volumen asociado aun sin letra y se muestra desconocido si no se obtiene.
 
 WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Crear, mover, copiar y borrar particiones siguen pendientes y no se ofrecen como botones funcionales.
+
+
+## Elevación al aplicar v0.4.0
+
+Preparar tamaño o formato ya no relanza la aplicación ni solicita UAC. Aplicar conserva la ventana principal y lanza un proceso auxiliar elevado del mismo ejecutable, sólo con la cola confirmada. Si la aplicación ya es administradora, no requiere otra elevación. Cancelar UAC conserva las operaciones pendientes.
+
+El auxiliar admite únicamente operaciones conocidas de tamaño/formato. Recibe un plan XML codificado en línea de comandos, no scripts ni rutas de archivos a ejecutar. Revalida identidad, offset/tamaño de partición, límites y protecciones antes de escribir. No usa un servicio privilegiado persistente. Cierra al terminar; la interfaz actualiza el mapa. No hay rollback de operaciones ya completadas si falla una posterior.
+
+Cuando el usuario sin elevar no puede consultar límites exactos o formatos compatibles, puede preparar una propuesta claramente indicada como pendiente de comprobación. El auxiliar la valida antes de la primera modificación y la rechaza si Windows no la admite. Los límites propuestos no implican que una ampliación sea posible a través de otras particiones.
+
+Las pruebas comprueban serialización del destino y ejecutan el proceso auxiliar real sobre un VHD desechable. La prueba automática hereda un token ya elevado del runner; no simula la interacción humana con el cuadro UAC en una sesión estándar. Crear, mover, copiar y borrar siguen pendientes.

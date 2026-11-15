@@ -28,7 +28,6 @@ internal sealed partial class MainForm
         formatButton.Click+=async(s,e)=>
         {
             if(selectedEditDisk==null||selectedEditPartition==null)return;
-            if(!IsAdmin()){try{Process.Start(new ProcessStartInfo(Application.ExecutablePath){UseShellExecute=true,Verb="runas"});Close();}catch(Exception ex){status.Text=ex.Message;}return;}
             var disk=selectedEditDisk;var part=selectedEditPartition;
             try
             {
@@ -38,7 +37,12 @@ internal sealed partial class MainForm
                 formatChoice.SelectedIndex=0;formatWarning.Text="FORMATEAR · disco "+disk.Number+" · "+part.Letter+": · actual "+part.FileSystem+Environment.NewLine+"Borrará TODOS los archivos de este volumen al pulsar Aplicar y confirmar.";
                 foreach(Control control in inlineEditor.Controls)control.Visible=ReferenceEquals(control,pendingList);inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;
             }
-            catch(Exception ex){status.Text="No se preparó el formateo: "+ex.Message;}
+            catch(Exception ex)
+            {
+                if(!IsAdmin()&&CanFormat(disk,part))
+                {formatDisk=disk;formatPart=part;formatVolumeId="";formatChoice.Items.Clear();formatChoice.Items.AddRange(new object[]{"NTFS","exFAT","FAT32"});formatChoice.SelectedIndex=0;formatWarning.Text="FORMATEAR "+part.Letter+": BORRA TODOS LOS ARCHIVOS. La compatibilidad se verificará con permisos al aplicar.";foreach(Control control in inlineEditor.Controls)control.Visible=ReferenceEquals(control,pendingList);inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;status.Text="Preparación sin permisos; compatibilidad pendiente.";}
+                else status.Text="No se preparó el formateo: "+ex.Message;
+            }
         };
         return formatEditor;
     }
@@ -78,6 +82,7 @@ internal sealed partial class MainForm
     static void ValidateFormat(PendingResize change)
     {
         var options=FormatOptions(change.Disk,change.Part);
+        if(change.VolumeId=="")change.VolumeId=options.Item1;
         if(options.Item1!=change.VolumeId||!options.Item2.Contains(change.FileSystem,StringComparer.OrdinalIgnoreCase))throw new InvalidOperationException("El volumen o sus formatos compatibles cambiaron. Prepara de nuevo la operación.");
     }
     static void ApplyFormat(PendingResize change)

@@ -91,6 +91,6 @@ jobs:
           Copy-Item WinPart/upstream partition-output/source/upstream -Recurse
       - uses: actions/upload-artifact@v4
         with:
-          name: WinPart-v0.3.0-portable
+          name: WinPart-v0.4.0-portable
           path: partition-output/
           if-no-files-found: error

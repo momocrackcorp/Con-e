@@ -67,11 +67,13 @@ internal sealed partial class MainForm
         string file=part.Letter+@":\cone-resize-test.txt";
         System.IO.File.WriteAllText(file,"Con-E: conservar datos durante reducción y ampliación");
         string original=System.IO.File.ReadAllText(file);ulong oldSize=part.Size;
-        ApplyResize(disk,part,128UL*1048576);
+        var testPlan=EncodeOperations(new[]{new PendingResize {Disk=disk,Part=part,Bytes=128UL*1048576}});
+        using(var helper=Process.Start(new ProcessStartInfo(Application.ExecutablePath,"--apply-plan "+testPlan){UseShellExecute=false}))
+        {if(!helper.WaitForExit(60000)){helper.Kill();throw new InvalidOperationException("Auxiliar excedió plazo");}if(helper.ExitCode!=0)throw new InvalidOperationException("Falló auxiliar de operaciones");}
         if(System.IO.File.ReadAllText(file)!=original)throw new InvalidOperationException("Contenido cambió tras reducción");
         disk=reload();part=disk.Partitions.Single(p=>CanResize(disk,p));
         if(part.Size!=128UL*1048576)throw new InvalidOperationException("Tamaño reducido incorrecto");
-        ApplyResize(disk,part,oldSize);
+        ExecuteOperations(DecodeOperations(EncodeOperations(new[]{new PendingResize {Disk=disk,Part=part,Bytes=oldSize}})));
         if(System.IO.File.ReadAllText(file)!=original)throw new InvalidOperationException("Contenido cambió tras ampliación");
         disk=reload();if(!disk.Partitions.Any(p=>p.Size==oldSize))throw new InvalidOperationException("Tamaño ampliado incorrecto");
         disk=reload();part=disk.Partitions.Single(p=>CanResize(disk,p));
@@ -125,35 +127,39 @@ internal sealed partial class MainForm
         string summary=string.Join(Environment.NewLine,pendingResizes.Select(p=>p.Description));
         if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+"Se modificarán estas particiones. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
         applyingChanges=true;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
+        bool preserveQueue=false;
         var closeGuard=new FormClosingEventHandler((s,e)=>e.Cancel=true);FormClosing+=closeGuard;
         try
         {
-            // Validate all planned targets before performing the first write.
-            foreach(var change in pendingResizes){if(change.FileSystem!=null){await System.Threading.Tasks.Task.Run(()=>ValidateFormat(change));continue;}var bounds=await System.Threading.Tasks.Task.Run(()=>ResizeBounds(change.Disk,change.Part));if(change.Bytes<bounds[0]||change.Bytes>bounds[1])throw new InvalidOperationException("Cambió el espacio permitido. Actualiza y prepara de nuevo los cambios.");}
-            while(pendingResizes.Count>0)
-            {
-                var change=pendingResizes[0];partitionInfo.Text="Aplicando: "+change.Description+Environment.NewLine+"No desconectes el disco.";
-                await System.Threading.Tasks.Task.Run(()=>{if(change.FileSystem!=null)ApplyFormat(change);else ApplyResize(change.Disk,change.Part,change.Bytes);});pendingResizes.RemoveAt(0);
-            }
+            string encoded=EncodeOperations(pendingResizes);
+            partitionInfo.Visible=true;partitionInfo.Text="Aplicando operaciones… La ventana de WinPart permanece abierta. No desconectes el disco.";
+            if(IsAdmin())await System.Threading.Tasks.Task.Run(()=>ExecuteOperations(DecodeOperations(encoded)));
+            else {int code=await System.Threading.Tasks.Task.Run(()=>LaunchElevated(encoded));if(code!=0)throw new InvalidOperationException("El proceso auxiliar no completó todos los cambios.");}
             partitionInfo.Text="Operaciones completadas.";
         }
+        catch(System.ComponentModel.Win32Exception ex) when(ex.NativeErrorCode==1223){preserveQueue=true;status.Text="Permiso cancelado; las operaciones siguen pendientes.";}
         catch(Exception ex){MessageBox.Show(this,"La ejecución se detuvo: "+ex.Message+Environment.NewLine+"Las operaciones terminadas no se deshacen automáticamente. Se actualizará el mapa.","Resultado",MessageBoxButtons.OK,MessageBoxIcon.Information);}
         finally
         {
-            FormClosing-=closeGuard;pendingResizes.Clear();applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();await RefreshData();
+            FormClosing-=closeGuard;applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;
+            if(preserveQueue)UpdatePending();
+            else {pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();await RefreshData();}
         }
     }
     async void EditPartition(DiskLayout disk,PartitionLayout part)
     {
         if(!CanResize(disk,part)){partitionInfo.Text="Selecciona una partición GPT NTFS de datos básicos con letra.";return;}
-        if(!IsAdmin())
-        {try{Process.Start(new ProcessStartInfo(Application.ExecutablePath){UseShellExecute=true,Verb="runas"});Close();}catch(Exception ex){partitionInfo.Text="No se habilitó la edición: "+ex.Message;}return;}
         try
         {
             partitionInfo.Text="Consultando límites…";var bounds=await System.Threading.Tasks.Task.Run(()=>ResizeBounds(disk,part));if(IsDisposed)return;
             ConfigureEditor(disk,part,bounds[0],bounds[1]);
         }
-        catch(Exception ex){partitionInfo.Text="No se pudo preparar el tamaño: "+ex.Message;}
+        catch(Exception ex)
+        {
+            if(!IsAdmin())
+            {ConfigureEditor(disk,part,1048576UL,disk.Size-part.Offset);editLimits.Text="Disco "+disk.Number+" · "+part.Letter+": · tamaño propuesto. Límites exactos se comprobarán con permisos al aplicar.";status.Text="Consulta limitada: "+ex.Message;}
+            else partitionInfo.Text="No se pudo preparar el tamaño: "+ex.Message;
+        }
     }
     void ConfigureEditor(DiskLayout disk,PartitionLayout part,ulong minimum,ulong maximum)
     {

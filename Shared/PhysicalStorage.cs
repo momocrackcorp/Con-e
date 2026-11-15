@@ -10,14 +10,15 @@ using System.Text.RegularExpressions;
 internal sealed class PhysicalDiskInfo
 {
     public uint Number,MediaType;public ushort BusType;
-    public string Model="No disponible",Serial="",UniqueId="",Style="No disponible";
+    public string Model="No disponible",Serial="",UniqueId="",Style="No disponible",MediumSource="",KnownForm="";
+    public uint? SpindleSpeed;
     public ulong Size;public bool Complete;readonly string inventoryInstance=Guid.NewGuid().ToString("N");
     public readonly List<PhysicalPartitionInfo> Partitions=new List<PhysicalPartitionInfo>();
     public bool IsVirtual {get{return BusType==14||BusType==15;}}
     public override string ToString(){return "Disco "+Number+" · "+Model;}
     public string Key {get{return Number+"|"+(UniqueId.Length>0?UniqueId:Serial.Length>0?Serial:inventoryInstance);}}
     public bool ModelMentionsM2 {get{return Regex.IsMatch(Model,@"\bM[.]?2\b",RegexOptions.IgnoreCase);}}
-    public string Form {get{return ModelMentionsM2?"M.2 indicado en modelo":"Formato físico no confirmado";}}
+    public string Form {get{return KnownForm.Length>0?KnownForm:ModelMentionsM2?"M.2 indicado en modelo":"Formato físico no confirmado";}}
     public string Kind {get{return IsVirtual?"VHD / disco virtual":MediaType==3?"HDD":MediaType==4?"SSD":"Medio no informado";}}
     public string Bus {get{return BusType==17?"NVMe":BusType==11?"SATA":BusType==3?"ATA":BusType==7?"USB":BusType==12?"SD":BusType==13?"MMC / eMMC":BusType==8?"RAID":BusType==14||BusType==15?"Virtual":"Conexión no informada";}}
     public string Art {get{return IsVirtual?"virtual":BusType==12||BusType==13?"sd":BusType==7&&MediaType!=3&&MediaType!=4?"usb":MediaType==3?"hdd":ModelMentionsM2&&BusType==17?"m2-nvme":ModelMentionsM2&&(BusType==11||BusType==3)?"m2-sata":ModelMentionsM2?"generic":MediaType==4?"ssd":"generic";}}
@@ -52,8 +53,9 @@ internal static class PhysicalStorage
         catch(Exception ex){warnings?.Add("Inventario de discos: "+ex.Message);}
         try{using(var q=Q(Cim,"SELECT Index,Model,SerialNumber,Size,InterfaceType FROM Win32_DiskDrive"))using(var rows=q.Get())foreach(ManagementObject r in rows)using(r){uint n=(uint)U(r,"Index");var disk=disks.FirstOrDefault(d=>d.Number==n);if(disk==null){disk=new PhysicalDiskInfo {Number=n,Model=S(r,"Model"),Serial=S(r,"SerialNumber"),Size=U(r,"Size")};disks.Add(disk);}if(disk.Serial.Length==0)disk.Serial=S(r,"SerialNumber");}}
         catch(Exception ex){warnings?.Add("Inventario Win32: "+ex.Message);}
-        try{using(var q=Q(Storage,"SELECT UniqueId,SerialNumber,MediaType FROM MSFT_PhysicalDisk"))using(var rows=q.Get())foreach(ManagementObject r in rows)using(r){string id=S(r,"UniqueId"),serial=S(r,"SerialNumber");var matches=disks.Where(d=>id.Length>0&&string.Equals(d.UniqueId,id,StringComparison.OrdinalIgnoreCase)||serial.Length>0&&string.Equals(d.Serial,serial,StringComparison.OrdinalIgnoreCase)).ToArray();if(matches.Length==1)matches[0].MediaType=(uint)U(r,"MediaType");}}
+        try{using(var q=Q(Storage,"SELECT * FROM MSFT_PhysicalDisk"))using(var rows=q.Get())foreach(ManagementObject r in rows)using(r){string id=S(r,"UniqueId"),serial=S(r,"SerialNumber");var matches=disks.Where(d=>id.Length>0&&string.Equals(d.UniqueId,id,StringComparison.OrdinalIgnoreCase)||serial.Length>0&&string.Equals(d.Serial,serial,StringComparison.OrdinalIgnoreCase)).ToArray();if(matches.Length==1){matches[0].MediaType=(uint)U(r,"MediaType");uint rpm;if(uint.TryParse(S(r,"SpindleSpeed"),out rpm))matches[0].SpindleSpeed=rpm;}}}
         catch(Exception ex){warnings?.Add("Tipo HDD/SSD: "+ex.Message);}
+        foreach(var d in disks){DiskMediumDetection.Resolve(d);if(!d.IsVirtual&&d.MediaType==0)DiskMediumDetection.Resolve(d,DiskMediumDetection.SeekPenalty(d.Number));}
         if(!partitions)return disks.OrderBy(d=>d.Number).ToList();
         var logical=new Dictionary<string,Tuple<string,string,ulong?,ulong?>>(StringComparer.OrdinalIgnoreCase);
         try{using(var q=Q(Cim,"SELECT DeviceID,FileSystem,VolumeName,Size,FreeSpace FROM Win32_LogicalDisk WHERE DriveType=2 OR DriveType=3"))using(var rows=q.Get())foreach(ManagementObject r in rows)using(r){ulong value;ulong? size=ulong.TryParse(S(r,"Size"),out value)?(ulong?)value:null,free=ulong.TryParse(S(r,"FreeSpace"),out value)?(ulong?)value:null;logical[S(r,"DeviceID").TrimEnd(':')]=Tuple.Create(S(r,"FileSystem"),S(r,"VolumeName"),size,free);}}

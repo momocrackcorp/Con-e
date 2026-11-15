@@ -33,7 +33,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -166,9 +166,10 @@ internal sealed partial class MainForm
             {
                 double used = current.RamTotalGiB.Value - current.RamAvailableGiB.Value;
                 double percent = used / current.RamTotalGiB.Value * 100;
-                ram.Controls.Add(new UsageDial { Value = percent, Width = 140, Height = 100, AccessibleName = "RAM utilizada: " + percent.ToString("0") + " %" });
-                Line(ram, used.ToString("0.0") + " GiB en uso · " + percent.ToString("0") + " %");
-                Line(ram, "Disponible: " + current.RamAvailableGiB.Value.ToString("0.0") + " GiB");
+                var usage=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,Margin=new Padding(0,0,0,4)};
+                usage.Controls.Add(new UsageDial {Value=percent,Width=84,Height=76,AccessibleName="RAM utilizada: "+percent.ToString("0")+" %",Margin=new Padding(0,0,8,0)});
+                var amounts=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,14,0,0)};
+                Line(amounts,used.ToString("0.0")+" GiB en uso · "+percent.ToString("0")+" %");Line(amounts,"Disponible: "+current.RamAvailableGiB.Value.ToString("0.0")+" GiB");usage.Controls.Add(amounts);ram.Controls.Add(usage);
             }
             else Line(ram, "Uso de RAM: no disponible");
             if(current != null) foreach(var module in current.Hardware.Where(h => h.Category == "Memoria RAM"))
@@ -340,7 +341,7 @@ internal sealed partial class MainForm
             form.hardwareList.Items[0].Selected = true; form.hardwareList.Focus(); Application.DoEvents();
             if (form.selectedHardware != unknown || form.hardwareDetails.Items.Count == 0) throw new InvalidOperationException("Ficha de hardware ausente");
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "hardware-desconocido.png"), ImageFormat.Png); }
-            StorageSmokeTest(form,dir);SensorSmokeTest(form,dir);
+            StorageSmokeTest(form,dir);SensorSmokeTest(form,dir);RamCompactSmokeTest(form,dir);
             form.tabs.SelectedIndex = 0; form.current = new Snapshot(); form.RenderDashboard(); Application.DoEvents();
             form.Scale(new SizeF(2, 2)); form.ResizeCards(); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-escala-doble.png"), ImageFormat.Png); }

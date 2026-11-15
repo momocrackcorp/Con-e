@@ -36,7 +36,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.1";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -56,6 +56,7 @@ internal sealed partial class MainForm : Form
     }
     internal static void SmokeTest()
     {
+        DiskMediumDetection.VerifyFallbacks();
         using(var form=new MainForm())
         {
             var disk=new DiskLayout {Number=0,Name="Disco simulado",BusType=15,Style="GPT",UniqueId="SIMULATED",Complete=true,Size=500UL*1073741824};
@@ -121,6 +122,7 @@ internal sealed partial class MainForm : Form
             form.RenderDiskMaps();form.SelectDisk(form.diskLayouts.First(d=>d.Number==10));form.diskMaps.ScrollControlIntoView(form.diskMaps.Controls.OfType<TableLayoutPanel>().First(g=>((DiskLayout)g.Tag).Number==10));Application.DoEvents();
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"miniaturas-discos.png"),ImageFormat.Png);}
             foreach(string kind in sampleKinds)using(var icon=DiskMiniature.Make(kind,64)){if(icon.GetPixel(0,0).A!=0)throw new Exception("Miniatura sin transparencia");}
+            var wd=new PhysicalDiskInfo {Number=20,Model="WDC WD10EARX-00N0YB0",BusType=8};DiskMediumDetection.Resolve(wd);var wdDisk=new DiskLayout {Number=20,Name=wd.Model+" · ejemplo",BusType=8,UniqueId="WD-RAID-TEST",Style="MBR",Complete=true,Size=931UL*1073741824,Info=wd};wdDisk.Partitions.Add(new PartitionLayout {Number=1,Offset=1048576,Size=900UL*1073741824,Type="Datos básicos MBR",FileSystem="NTFS"});form.diskLayouts.Add(wdDisk);form.RenderDiskMaps();form.SelectDisk(wdDisk);form.diskMaps.ScrollControlIntoView(form.diskMaps.Controls.OfType<TableLayoutPanel>().First(g=>ReferenceEquals(g.Tag,wdDisk)));Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"hdd-raid-corregido.png"),ImageFormat.Png);}
             var real=ReadDiskLayouts(new Snapshot());if(!real.Any(d=>d.Partitions.Count>0))throw new Exception("La consulta real no obtuvo particiones");
             File.WriteAllText(Path.Combine(dir,"resultado.txt"),"OK: aplicación independiente, cola visual, descarte y lectura real.");form.Close();
         }

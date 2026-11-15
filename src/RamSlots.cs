@@ -63,33 +63,84 @@ internal sealed partial class MainForm
     void RenderRamSlots(FlowLayoutPanel card)
     {
         if(current==null)return;
+        var grid=new CompactRamGrid {Margin=new Padding(0,3,0,4)};
         foreach(var slot in current.RamSlots)
         {
-            var panel=new FlowLayoutPanel {FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,BackColor=ModernTheme.Raised,Padding=new Padding(8),Margin=new Padding(0,5,0,5)};
-            panel.Controls.Add(new SlotPicture {Occupied=slot.Module!=null||slot.State.StartsWith("Ocupada"),Width=145,Height=38,AccessibleName=slot.Name+": "+slot.State});
-            Line(panel,slot.Name,true);Line(panel,slot.State);
-            if(slot.Module!=null)
-            {
-                string capacity,type,speed;slot.Module.Properties.TryGetValue("Capacidad (bytes)",out capacity);slot.Module.Properties.TryGetValue("Tipo SMBIOS (código)",out type);slot.Module.Properties.TryGetValue("Velocidad configurada (MHz)",out speed);double bytes;
-                Line(panel,(double.TryParse(capacity,out bytes)?(bytes/1073741824d).ToString("0.##")+" GiB":"Capacidad no disponible")+" · "+RamType(type??"0")+" · "+speed+" MHz");
-                var details=slot.Module.Properties.Select(p=>Line(panel,p.Key+": "+p.Value)).ToArray();foreach(var l in details)l.Visible=false;
-                Button toggle=null;toggle=ActionButton("Ver detalle del módulo",()=>{bool show=!details[0].Visible;foreach(var l in details)l.Visible=show;toggle.Text=show?"Ocultar detalle":"Ver detalle del módulo";ResizeCards();});panel.Controls.Add(toggle);
-            }
-            card.Controls.Add(panel);
+            string capacity="",type="",speed="";double bytes;
+            if(slot.Module!=null){slot.Module.Properties.TryGetValue("Capacidad (bytes)",out capacity);slot.Module.Properties.TryGetValue("Tipo SMBIOS (código)",out type);slot.Module.Properties.TryGetValue("Velocidad configurada (MHz)",out speed);}
+            string summary=slot.Module==null?slot.State:(double.TryParse(capacity,out bytes)?(bytes/1073741824d).ToString("0.##")+" GiB":"Capacidad no disponible")+" · "+RamType(type??"0")+(string.IsNullOrWhiteSpace(speed)?"":" · "+speed+" MHz");
+            grid.AddSlot(slot,summary,ResizeCards);
         }
-        Line(card,"SMBIOS puede incluir memoria soldada. Una posición libre informada no garantiza que sea accesible o ampliable.");
+        card.Controls.Add(grid);
+        Help(card,"SMBIOS puede incluir memoria soldada. Una posición libre informada no garantiza que sea accesible o ampliable.");
     }
+    static void RamCompactSmokeTest(MainForm form,string dir)
+    {
+        DiskMediumDetection.VerifyFallbacks();
+        var before=form.current;var originalSize=form.Size;var test=new Snapshot {Manufacturer=before.Manufacturer,Model="RAM compacta · datos simulados",RamTotalGiB=32,RamAvailableGiB=19.6,PnpReadComplete=true};
+        foreach(var p in before.Summary.Where(p=>p[0]!="Memoria RAM instalada"&&p[0]!="Memoria instalada en módulos"&&p[0]!="Ranuras RAM"&&p[0]!="Procesador"&&p[0]!="Núcleos / procesadores lógicos"))test.Summary.Add(p);
+        test.Summary.Add(new[]{"Memoria RAM instalada","32 GiB"});test.Summary.Add(new[]{"Ranuras RAM","4 posiciones informadas · 4 módulos detectados"});test.Summary.Add(new[]{"Procesador","Intel Core i7-4770K · ejemplo"});test.Summary.Add(new[]{"Núcleos / procesadores lógicos","4 / 8"});test.CoreThreads.AddRange(new[]{2,2,2,2});
+        foreach(string name in new[]{"DIMM_A1","DIMM_A2","DIMM_B1","DIMM_B2"}){var m=new HardwareItem {Name=name,Category="Memoria RAM"};m.Properties["Capacidad (bytes)"]="8589934592";m.Properties["Tipo SMBIOS (código)"]="24";m.Properties["Velocidad configurada (MHz)"]="1600";m.Properties["Fabricante"]="Ejemplo";m.Properties["Serie"]="SERIE-PRUEBA";test.RamSlots.Add(new RamSlot {Name=name,State="Ocupada · módulo detectado",Module=m});}
+        form.current=test;form.Size=new Size(1800,900);form.tabs.SelectedIndex=0;form.RenderDashboard();form.ResizeCards();Application.DoEvents();
+        var card=form.cards.First(c=>Convert.ToString(c.Tag)=="Memoria RAM");var grid=card.Controls.OfType<CompactRamGrid>().Single();var tiles=grid.Controls.OfType<CompactRamTile>().ToArray();
+        if(tiles.Length!=4||tiles[0].Top!=tiles[1].Top||tiles[2].Top<=tiles[0].Top||grid.Height>280*form.DeviceDpi/96f)throw new Exception("RAM no compacta o sin distribución de dos columnas");
+        int collapsed=tiles[0].Height;tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height<=collapsed)throw new Exception("No expande detalle de módulo RAM");tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height!=collapsed)throw new Exception("No contrae detalle de módulo RAM");
+        using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-ancha.png"));}
+        form.Width=1100;form.ResizeCards();Application.DoEvents();if(tiles[0].Top==tiles[1].Top)throw new Exception("RAM no se adapta a una columna en tarjetas estrechas");
+        using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-estrecha.png"));}
+        System.IO.File.WriteAllText(System.IO.Path.Combine(dir,"ram-hdd.txt"),"OK: cuatro módulos RAM en filas compactas, dos/una columna, detalle expandible y plegable. HDD WD10EARX/WD10EAVS detrás de RAID reconocidos por catálogo; RPM, descriptor válido/inválido, SSD y VHD sin reclasificar indebidamente.");
+        form.current=before;form.Size=originalSize;form.RenderDashboard();
+    }
+
+}
+internal sealed class CompactRamGrid : FlowLayoutPanel
+{
+    bool fitting;
+    internal CompactRamGrid(){FlowDirection=FlowDirection.LeftToRight;WrapContents=true;AutoSize=true;AutoSizeMode=AutoSizeMode.GrowAndShrink;Padding=Padding.Empty;BackColor=ModernTheme.Surface;Resize+=(s,e)=>Fit();}
+    internal void AddSlot(RamSlot slot,string summary,Action changed)
+    {var tile=new CompactRamTile(slot,summary,changed);Controls.Add(tile);Fit();}
+    void Fit()
+    {
+        if(fitting)return;fitting=true;
+        try{int columns=ClientSize.Width>=420*DeviceDpi/96f?2:1;int width=Math.Max(120,(ClientSize.Width-columns*6)/columns);foreach(var tile in Controls.OfType<CompactRamTile>())tile.SetWidth(width);}
+        finally{fitting=false;}
+    }
+}
+internal sealed class CompactRamTile : TableLayoutPanel
+{
+    readonly FlowLayoutPanel text=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=Padding.Empty};
+    readonly FlowLayoutPanel detail=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,6,0,0),Visible=false};
+    readonly LinkLabel toggle;
+    internal CompactRamTile(RamSlot slot,string summary,Action changed)
+    {
+        AutoSize=true;AutoSizeMode=AutoSizeMode.GrowAndShrink;ColumnCount=2;RowCount=2;BackColor=ModernTheme.Raised;Padding=new Padding(6);Margin=new Padding(0,3,6,3);Tag=slot;
+        ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,62));ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));RowStyles.Add(new RowStyle(SizeType.AutoSize));RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        bool occupied=slot.Module!=null||slot.State.StartsWith("Ocupada");
+        Controls.Add(new SlotPicture {Occupied=occupied,Width=54,Height=23,Margin=new Padding(0,6,4,0),AccessibleName=slot.Name+": "+slot.State},0,0);
+        string state=occupied?"Ocupada":slot.State.StartsWith("Libre")?"Libre":"Sin confirmar";
+        text.Controls.Add(new Label {Text=slot.Name+" · "+state,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",10,FontStyle.Bold),ForeColor=ModernTheme.Text,Margin=new Padding(0,0,0,2)});
+        text.Controls.Add(new Label {Text=summary,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",9.5f),ForeColor=ModernTheme.Muted,Margin=Padding.Empty});
+        if(slot.Module!=null){foreach(var p in slot.Module.Properties)detail.Controls.Add(new Label {Text=p.Key+": "+p.Value,UseMnemonic=false,AutoSize=true,ForeColor=ModernTheme.Muted,Font=new Font("Segoe UI",9.5f),Margin=new Padding(0,0,0,3)});toggle=new LinkLabel {Text="Detalles",AutoSize=true,Font=new Font("Segoe UI",9.5f),LinkColor=ModernTheme.Accent,Margin=new Padding(0,2,0,0)};toggle.LinkClicked+=(s,e)=>{detail.Visible=!detail.Visible;toggle.Text=detail.Visible?"Ocultar detalles":"Detalles";PerformLayout();changed?.Invoke();};text.Controls.Add(toggle);}
+        Controls.Add(text,1,0);Controls.Add(detail,0,1);SetColumnSpan(detail,2);AccessibleName=slot.Name+": "+slot.State+" · "+summary;
+    }
+    internal void SetWidth(int width)
+    {
+        MinimumSize=MaximumSize=new Size(width,0);Width=width;int available=Math.Max(65,width-Padding.Horizontal-66);
+        text.MinimumSize=text.MaximumSize=new Size(available,0);foreach(Control c in text.Controls)c.MaximumSize=new Size(available,0);detail.MinimumSize=detail.MaximumSize=new Size(Math.Max(80,width-Padding.Horizontal),0);foreach(Control c in detail.Controls)c.MaximumSize=new Size(Math.Max(80,width-Padding.Horizontal),0);
+    }
+    internal void ToggleDetailsForTest(){if(toggle!=null){detail.Visible=!detail.Visible;toggle.Text=detail.Visible?"Ocultar detalles":"Detalles";PerformLayout();}}
 }
 internal sealed class SlotPicture : Control
 {
     public bool Occupied;
-    public SlotPicture(){SetStyle(ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint,true);}
+    public SlotPicture(){SetStyle(ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint|ControlStyles.ResizeRedraw,true);}
     protected override void OnPaint(PaintEventArgs e)
     {
-        base.OnPaint(e);var box=new Rectangle(3,5,Width-8,25);
+        base.OnPaint(e);int h=Math.Max(8,Height-7);var box=new Rectangle(2,2,Math.Max(8,Width-5),h);
         using(var brush=new SolidBrush(Occupied?Color.FromArgb(52,127,85):ModernTheme.Track))e.Graphics.FillRectangle(brush,box);
-        using(var pen=new Pen(Color.FromArgb(75,95,115),2))e.Graphics.DrawRectangle(pen,box);
-        if(Occupied)for(int i=0;i<4;i++){e.Graphics.FillRectangle(Brushes.DarkSlateGray,12+i*28,10,20,14);e.Graphics.FillRectangle(Brushes.Goldenrod,12+i*28,30,20,4);}
-        else TextRenderer.DrawText(e.Graphics,"Sin módulo",Font,box,ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+        using(var pen=new Pen(Color.FromArgb(75,95,115)))e.Graphics.DrawRectangle(pen,box);
+        int chip=Math.Max(2,(box.Width-10)/4);
+        if(Occupied)for(int i=0;i<4;i++){e.Graphics.FillRectangle(Brushes.DarkSlateGray,box.Left+4+i*(chip+1),box.Top+3,Math.Max(2,chip-2),Math.Max(4,h-6));e.Graphics.FillRectangle(Brushes.Goldenrod,box.Left+4+i*(chip+1),box.Bottom+1,Math.Max(2,chip-2),3);}
+        else TextRenderer.DrawText(e.Graphics,"Libre",Font,box,ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
     }
 }

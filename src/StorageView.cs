@@ -59,7 +59,7 @@ internal sealed class StorageView : UserControl
     {
         version++;scanCancellation?.Cancel();StopMonitor();disk=d;partition=null;device=null;foreach(Control old in volumeButtons.Controls.Cast<Control>().ToArray())old.Dispose();
         if(d==null){heading.Text="No se pudieron identificar discos";diskType.Text="Actualiza el inventario desde Mi equipo.";volumeCard.Visible=false;analyze.Enabled=false;return;}
-        DiskSelected?.Invoke(d);volumeCard.Visible=true;heading.Text="Disco "+d.Number+" · "+d.Model;diskType.Text=d.Kind+" · "+d.Bus+" · "+StorageFormat.Size(d.Size)+" · "+d.Style+Environment.NewLine+d.Form+" · Miniatura ilustrativa";miniature.Kind=d.Art;miniature.Invalidate();
+        DiskSelected?.Invoke(d);volumeCard.Visible=true;heading.Text="Disco "+d.Number+" · "+d.Model;diskType.Text=d.Kind+" · "+d.Bus+" · "+StorageFormat.Size(d.Size)+" · "+d.Style+Environment.NewLine+d.Form+" · "+d.MediumSource+" · Miniatura ilustrativa";miniature.Kind=d.Art;miniature.Invalidate();
         foreach(var p in d.Partitions.OrderBy(p=>p.Offset)){var item=p;var b=Button(p.Title+" · "+p.FileSystem);b.Tag=p;b.MaximumSize=new Size(Math.Max(220,ClientSize.Width-80),0);b.Click+=(s,e)=>ChoosePartition(item);volumeButtons.Controls.Add(b);}
         ChoosePartition(d.Partitions.FirstOrDefault(p=>p.Number==chosen)??d.Partitions.FirstOrDefault(p=>p.Letter.Length>0)??d.Partitions.FirstOrDefault());
     }

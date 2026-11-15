@@ -30,9 +30,9 @@ internal sealed partial class MainForm
         nvme.Partitions.Add(new PhysicalPartitionInfo {Number=1,Offset=1048576,Size=100UL*1048576,Role="Sistema EFI",FileSystem="FAT32"});
         nvme.Partitions.Add(new PhysicalPartitionInfo {Number=2,Offset=101UL*1048576,Size=500UL*1073741824,VolumeSize=500UL*1073741824,Free=320UL*1073741824,Letter="C",Label="SISTEMA · ejemplo",FileSystem="NTFS"});
         nvme.Partitions.Add(new PhysicalPartitionInfo {Number=3,Offset=501UL*1073741824,Size=498UL*1073741824,VolumeSize=498UL*1073741824,Free=410UL*1073741824,Letter="D",Label="DATOS · ejemplo",FileSystem="NTFS"});
-        var hdd=new PhysicalDiskInfo {Number=1,Model="WD Blue · ejemplo",Serial="TEST-HDD",UniqueId="TEST-HDD",MediaType=3,BusType=11,Size=931UL*1073741824,Style="GPT",Complete=true};hdd.Partitions.Add(new PhysicalPartitionInfo {Number=1,Size=930UL*1073741824,VolumeSize=930UL*1073741824,Free=580UL*1073741824,Letter="H",Label="ARCHIVO · ejemplo",FileSystem="NTFS"});
+        var hdd=new PhysicalDiskInfo {Number=1,Model="WDC WD10EARX-00N0YB0 · ejemplo",Serial="TEST-HDD",UniqueId="TEST-HDD",MediaType=0,BusType=8,Size=931UL*1073741824,Style="GPT",Complete=true};hdd.Partitions.Add(new PhysicalPartitionInfo {Number=1,Size=930UL*1073741824,VolumeSize=930UL*1073741824,Free=580UL*1073741824,Letter="H",Label="ARCHIVO · ejemplo",FileSystem="NTFS"});
         var ssd=new PhysicalDiskInfo {Number=2,Model="SSD SATA · ejemplo",Serial="TEST-SSD",UniqueId="TEST-SSD",MediaType=4,BusType=11,Size=447UL*1073741824,Style="GPT",Complete=true};ssd.Partitions.Add(new PhysicalPartitionInfo {Number=1,Size=446UL*1073741824,VolumeSize=446UL*1073741824,Free=326UL*1073741824,Letter="F",Label="TRABAJO · ejemplo",FileSystem="exFAT"});
-        return new[]{nvme,hdd,ssd};
+        DiskMediumDetection.Resolve(hdd);return new[]{nvme,hdd,ssd};
     }
     static void StorageSmokeTest(MainForm form,string dir)
     {

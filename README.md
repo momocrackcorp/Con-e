@@ -1,25 +1,25 @@
-# Con-E v0.15.0 — diagnóstico
+# Con-E v0.15.1 — diagnóstico
 
 El gestor de particiones se ha extraído a [WinPart](WinPart/README.md), un proyecto y ejecutable independientes. Con-E conserva las tarjetas de hardware, inventario de controladores, logos, informes y herramientas. Ya no contiene la pestaña Mapa de discos ni operaciones de modificación de particiones.
 
 ## Compilación y descargas
 
-GitHub Actions genera dos paquetes separados: Con-E-v0.15.0-portable y WinPart-v0.8.0-portable. Con-E 0.14 requiere Windows de 64 bits y .NET Framework 4.8; WinPart conserva sus requisitos anteriores. Con-E no necesita WinPart para ejecutarse.
+GitHub Actions genera dos paquetes separados: Con-E-v0.15.1-portable y WinPart-v0.8.0-portable. Con-E 0.14 requiere Windows de 64 bits y .NET Framework 4.8; WinPart conserva sus requisitos anteriores. Con-E no necesita WinPart para ejecutarse.
 
 El historial de cambios anterior se conserva en Git. El código extraído está en WinPart/src y sus pruebas de reducción/ampliación se ejecutan sólo sobre un VHD desechable del runner. Con-E mantiene sus pruebas de interfaz y datos simulados. WinPart tiene su propia entrada de aplicación y proyecto, sin compilar los archivos de Con-E.
 
 
-## RAM por posición v0.15.0
+## RAM por posición v0.15.1
 
 Vista de módulos y posiciones SMBIOS: ocupada, libre informada o ubicación no confirmada. Se decodifican estructuras SMBIOS tipo 17, incluidas posiciones vacías, y se vinculan por nombre con Win32_PhysicalMemory para mostrar capacidad, DDR, velocidad, fabricante, pieza y serie. Cada módulo tiene detalles expandibles. Si sólo se conoce el número total, las posiciones adicionales no se identifican como ranuras físicas accesibles. La RAM soldada puede figurar como dispositivo. El total instalado se suma desde capacidades de módulos; el uso sigue siendo una lectura del sistema operativo.
 
 
-## Núcleos e hilos v0.15.0
+## Núcleos e hilos v0.15.1
 
 Procesador muestra un cuadro por núcleo físico con el número de hilos lógicos asociados. La relación se obtiene con GetLogicalProcessorInformationEx, sin asumir dos hilos por núcleo. En sistemas híbridos pueden aparecer núcleos de uno y dos hilos; no se infiere que sean P/E ni representa uso de cada núcleo en tiempo real; la barra de CPU muestra el uso global. Se conservan identificación Intel/AMD/ARM, datos WMI y detalle expandible. Si Windows no proporciona la topología se indica en lugar de generar un esquema inventado. En equipos de más de 256 núcleos el esquema se limita a 256 cuadros, aunque el resumen indica el total.
 
 
-## Interfaz moderna y CPU en vivo — v0.15.0
+## Interfaz moderna y CPU en vivo — v0.15.1
 
 Con-E incorpora controles propios en el espacio de nombres `UIModernization`: tarjetas claras con bordes redondeados y barras de progreso de trazo suave. No necesita instalar una biblioteca gráfica adicional. La distribución sigue adaptándose al ancho de la ventana; conserva inventario, RAM por ranura, vídeo, discos, BIOS, informes, hardware/controladores y herramientas. El diagrama de núcleos/hilos se despliega en Ver detalle del procesador. Los logotipos conservan una pequeña base clara para mantener sus colores y legibilidad.
 
@@ -28,12 +28,12 @@ La CPU se consulta con `Win32_PerfFormattedData_PerfOS_Processor`, instancia `_T
 Las pruebas incluyen muestras controladas en un trabajador, comprobación de actualización en el hilo de interfaz, ausencia de solapamiento, cancelación, estado sin datos y consulta WMI real. Se generan capturas con tarjetas expandidas, ventana ancha/estrecha y escala doble. Las capturas de diseño usan datos simulados y no representan el equipo del usuario.
 
 
-### Tema claro — v0.15.0
+### Tema claro — v0.15.1
 
 Fondo gris claro, tarjetas blancas, textos oscuros y acentos azules. Conserva componentes modernos, métricas WMI en segundo plano, cancelación y tarjetas adaptables. Se retira el tema oscuro como apariencia predeterminada.
 
 
-## Almacenamiento gráfico — v0.15.0
+## Almacenamiento gráfico — v0.15.1
 
 La tarjeta Almacenamiento incorpora selector de unidad, anillo de porcentaje usado, espacio total/usado/libre y sistema de archivos. Incluye unidades fijas y extraíbles que Windows pueda leer. **Ver uso y analizar carpetas** abre un panel independiente con capacidad, modelo y tipo cuando pueden asociarse, estado de salud informado por Windows, temperatura disponible y lectura/escritura WMI en segundo plano. No se inventa un porcentaje de vida útil; si el controlador o los permisos no entregan salud/temperatura se indica No disponible.
 
@@ -44,7 +44,7 @@ El panel pausa la telemetría cuando está oculto y cancela sus tareas al cerrar
 Pruebas: análisis nativo de una carpeta temporal con archivos y un enlace duro; recuento sin duplicación, conservación de contenido y cancelación; coherencia de suma del gráfico y capturas en varios anchos; consulta de E/S WMI. Los gráficos de ejemplo usan datos simulados.
 
 
-## Sensores y SMART — v0.15.0
+## Sensores y SMART — v0.15.1
 
 1. Capacidad en anillo y barra horizontal inferior; distribución de carpetas en segmentos y leyenda, sin gráfico de torta.
 2. **Temperaturas y sensores** muestra CPU, GPU, placa/chasis y discos con nombre original del sensor, temperaturas, ventiladores en RPM y mínimos/máximos de la sesión. Los máximos de las tarjetas son la mayor temperatura actual entre los sensores de ese grupo, no el límite térmico del equipo.
@@ -62,7 +62,7 @@ Dependencias y licencias en THIRD_PARTY_NOTICES.md y Licenses/. Extrae el paquet
 El paquete de sensores 0.14 selecciona las bibliotecas nativas win-x64 de NuGet. No es una compilación para Windows x86 ni ARM64 nativo.
 
 
-## Discos físicos y miniaturas compartidas — v0.15.0
+## Discos físicos y miniaturas compartidas — v0.15.1
 
 El dashboard muestra una tarjeta por disco enumerado por Windows, con número, modelo, capacidad, medio HDD/SSD informado y conexión independiente (SATA, NVMe, USB, RAID, etc.). Los discos virtuales se identifican como virtuales. El medio se vincula por identificador persistente o serie, nunca por la posición de MSFT_PhysicalDisk. M.2 sólo se etiqueta cuando aparece explícitamente en el modelo; NVMe no demuestra M.2. Las miniaturas son ilustrativas, no fotografías del equipo.
 
@@ -71,3 +71,10 @@ El dashboard muestra una tarjeta por disco enumerado por Windows, con número, m
 La barra de contenido está inmediatamente debajo del anillo. Su leyenda seleccionable muestra las carpetas de la raíz, contando también sus subcarpetas, sin listar archivos individuales. Los archivos sueltos se agrupan en Archivos en raíz; metadatos y omisiones aparecen como Sistema/sin analizar cuando la capacidad permite compararlo. Se muestran todas las carpetas leídas, con lista desplazable. El análisis lee metadatos en segundo plano, se puede cancelar y se conserva en caché por identidad de disco y partición, con hora de la lectura. Recorrer muchos archivos puede tardar; no se promete lectura instantánea de la MFT.
 
 Tarjetas con borde oscuro y tarjeta seleccionada con borde azul más grueso. Miniaturas compartidas desde Shared/ en Con-E y WinPart, sin una dependencia gráfica adicional.
+
+
+## RAM compacta y HDD detrás de RAID — v0.15.1
+
+Las posiciones RAM se muestran en filas con miniatura pequeña, nombre/estado, capacidad/tipo/velocidad y enlace Detalles. Se organizan en dos columnas cuando la tarjeta tiene al menos 420 píxeles lógicos de ancho; en tarjetas estrechas se usa una columna. Los detalles se expanden dentro de la fila. El anillo y los valores de uso comparten una fila. Se mantienen la identificación SMBIOS y la información de módulos, sin reducir la fuente principal.
+
+La detección compartida con WinPart incorpora RPM, un catálogo exacto de modelos WD documentados y la consulta de sólo lectura StorageDeviceSeekPenaltyProperty. Incluye WD10EARX y WD10EAVS, aunque la conexión figure como RAID y MediaType no esté informado. No se supone que RAID sea un medio, que TRIM pruebe SSD ni que ausencia de penalización implique SSD. Fuentes del catálogo y del API en Shared/MODEL_SOURCES.md, también incluido en las licencias del paquete.

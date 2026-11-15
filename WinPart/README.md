@@ -1,4 +1,4 @@
-# WinPart v0.9.0 (nombre provisional)
+# WinPart v0.9.1 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -14,7 +14,7 @@ Mover, copiar particiones y más sistemas de archivos. No es un port completo de
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.9.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.9.1-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
 ## Sistemas de archivos v0.4.0
@@ -84,7 +84,7 @@ Los encabezados indican VHD/imagen respaldada por archivo (BusType 15), disco vi
 Las pruebas usan un VHD propio desechable: crear cuatro particiones, eliminar la exFAT, verificar el hueco resultante y que el contenido de otra partición no cambia. Se comprueban protecciones, serialización, preparación/descarte sin escritura y clasificación de iconos. Las capturas incluyen barra normal y estrecha.
 
 
-## Operaciones avanzadas v0.9.0
+## Operaciones avanzadas v0.9.1
 
 La barra **Avanzadas** permite preparar (1) eliminación de una partición seleccionada aunque no tenga letra o sea EFI, MSR, recuperación o un tipo desconocido por Windows; y (2) vaciar el disco completo y preparar una tabla GPT o MBR. No necesita interpretar ni descifrar el sistema de archivos. La creación se amplía a primarias MBR (hasta cuatro, sin contenedores extendidos; límite conservador de 2 TiB) y la edición de datos NTFS/formatos Windows reconoce MBR además de GPT.
 
@@ -101,8 +101,13 @@ Pruebas: VHD exclusivo desechable, eliminación EFI/recuperación/MSR/tipo Linux
 Para reconstruir con el icono en Windows: ejecutar `./WinPart/build-icon.ps1` antes de `dotnet build WinPart/src/WinPart.csproj -c Release`. El paquete fuente incluye el script y el icono generado.
 
 
-## Miniaturas compartidas — v0.9.0
+## Miniaturas compartidas — v0.9.1
 
 Las cabeceras de discos usan las mismas miniaturas de HDD, SSD y M.2 SATA/NVMe que Con-E. El medio HDD/SSD se consulta en Windows y la conexión se informa por separado. M.2 sólo se etiqueta cuando el modelo lo indica; la miniatura es orientativa. USB, SD/MMC, discos virtuales y medios desconocidos conservan representaciones genéricas. La tarjeta seleccionada tiene borde azul y las demás borde oscuro.
 
 Los cambios son de inventario y presentación: las operaciones y sus validaciones conservan el motor existente. El paquete incluye source/WinPart y source/Shared con el recurso gráfico y el código compartido necesarios para recompilar: `dotnet build source/WinPart/src/WinPart.csproj -c Release`.
+
+
+## Corrección HDD / RAID — v0.9.1
+
+La lectura compartida con Con-E reconoce HDD por MediaType, RPM, modelos base documentados (incluidos WD10EARX y WD10EAVS) y penalización de búsqueda de Windows. RAID se conserva como conexión del controlador. Si no hay datos suficientes el medio permanece sin informar; no se etiqueta como SSD sólo por tener TRIM o por no informar penalización. Fuentes en source/Shared/MODEL_SOURCES.md. Las operaciones de particiones mantienen su motor y validaciones.

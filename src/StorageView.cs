@@ -106,6 +106,7 @@ internal sealed class StorageView : UserControl
         if(device==null&&fixture==null)return;
         string status=disk==null||disk.Status=="Unknown"?device?.Health:disk.Status=="Good"?"Correcto según SMART":disk.Status=="Caution"?"Advertencia SMART":"Estado no saludable (SMART)";
         health.Text="Estado: "+(status??"No disponible")+(disk?.Life.HasValue==true?" · Vida restante estimada: "+disk.Life.Value.ToString("0")+" %":"");
+        if(disk!=null)notice.Text=(device?.Model??"Disco de ejemplo")+" · SMART del dispositivo físico. La vida restante es una estimación del fabricante.";
         var temp=disk?.Temperature??device?.Temperature;temperature.Text="Temperatura: "+(temp.HasValue?temp+" °C":"No disponible");
         var hours=disk?.Hours??device?.PowerOnHours;lifetime.Text="Horas encendido: "+(hours.HasValue?hours.Value.ToString("N0")+" h":"No disponible");
         totals.Text="Lectura acumulada: "+(disk?.ReadGB.HasValue==true?disk.ReadGB.Value.ToString("N0")+" GB":"No disponible")+Environment.NewLine+"Escritura acumulada: "+(disk?.WrittenGB.HasValue==true?disk.WrittenGB.Value.ToString("N0")+" GB":"No disponible");

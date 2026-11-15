@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+if (-not (Test-Path output/LibreHardwareMonitorLib.dll)) { throw 'Falta la biblioteca de sensores en el paquete portátil' }
 New-Item output/Licenses, output/Sensors -ItemType Directory -Force | Out-Null
 Copy-Item Licenses/* output/Licenses/
 Copy-Item THIRD_PARTY_NOTICES.md output/

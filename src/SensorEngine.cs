@@ -69,7 +69,7 @@ internal static class SensorWorker
         {
             bool temperature=sensor.SensorType==SensorType.Temperature,fan=sensor.SensorType==SensorType.Fan;
             // Warning/critical temperatures are limits, not measurements.
-            if((!temperature&&!fan)||sensor.Name.IndexOf("Warning",StringComparison.OrdinalIgnoreCase)>=0||sensor.Name.IndexOf("Critical",StringComparison.OrdinalIgnoreCase)>=0)continue;
+            if((!temperature&&!fan)||sensor.Name.IndexOf("Warning",StringComparison.OrdinalIgnoreCase)>=0||sensor.Name.IndexOf("Critical",StringComparison.OrdinalIgnoreCase)>=0||sensor.Name.IndexOf("Distance",StringComparison.OrdinalIgnoreCase)>=0||sensor.Name.IndexOf("TjMax",StringComparison.OrdinalIgnoreCase)>=0)continue;
             float? value=sensor.Value;
             if(value.HasValue&&(float.IsNaN(value.Value)||float.IsInfinity(value.Value)||(temperature&&(value.Value< -50||value.Value>180))||(fan&&value.Value<0)))value=null;
             frame.Sensors.Add(new SensorReading {Id=sensor.Identifier.ToString(),Group=Group(h),Device=h.Name,Name=sensor.Name,Unit=temperature?"°C":"RPM",Value=value});

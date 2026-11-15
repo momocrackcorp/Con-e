@@ -35,7 +35,7 @@ internal sealed class PartitionLayout
     public ulong Offset, Size;
     public string Letter="", Type="No determinado", FileSystem="No disponible", Label="";
     public ulong? Free, VolumeSize;
-    public bool Gap;
+    public bool Gap,IsBoot,IsSystem;
     public string Title { get { return Gap ? Type : (Letter.Length>0 ? Letter + ": " : "Partición " + Number + " · ") + Type; } }
 }
 internal sealed partial class MainForm
@@ -50,10 +50,10 @@ internal sealed partial class MainForm
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
-        toolbar.Controls.Add(new Label {Text="Modificar tamaño de particiones GPT NTFS. Requiere administrador.",AutoSize=true,Margin=new Padding(8)});
+        toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
+        toolbar.Controls.Add(new Label {Text="Preparar operaciones → revisar pendientes → Aplicar. Formatear borra archivos.",AutoSize=true,Margin=new Padding(8)});
         resizePartition.Click+=(s,e)=>{if(selectedEditDisk!=null&&selectedEditPartition!=null)EditPartition(selectedEditDisk,selectedEditPartition);};
-        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(BuildInlineEditor());panel.Controls.Add(toolbar);
+        panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(BuildInlineEditor());panel.Controls.Add(BuildFormatEditor());panel.Controls.Add(toolbar);
         diskMaps.Resize+=(s,e)=>FitDiskGroups();
         return panel;
     }
@@ -65,7 +65,7 @@ internal sealed partial class MainForm
     static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
     {
-        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);
+        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);formatButton.Enabled=CanFormat(disk,p);
         partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+Environment.NewLine+
             "Tamaño del bloque: "+Space(p.Size)+" · Offset: "+p.Offset.ToString(CultureInfo.InvariantCulture)+" bytes"+Environment.NewLine+
             (p.Gap ? "Intervalo sin partición en el mapa leído; puede incluir espacios de alineación o metadatos." :
@@ -80,7 +80,7 @@ internal sealed partial class MainForm
         try
         {
             foreach(Control old in diskMaps.Controls.Cast<Control>().ToArray())old.Dispose();
-            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;
+            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;formatButton.Enabled=false;
             partitionInfo.Height=Math.Max(140,TextRenderer.MeasureText("Ag",Font).Height*6+12);
             partitionInfo.Text="Selecciona un bloque del mapa o una fila para ver sus datos. Las particiones pequeñas se seleccionan también en la lista.";
             if(diskLayouts.Count==0) { diskMaps.Controls.Add(new Label { Text="No se pudo obtener el mapa físico de discos. Revisa las incidencias de lectura.", AutoSize=true, MaximumSize=new Size(500,0) });return; }
@@ -94,11 +94,13 @@ internal sealed partial class MainForm
                 var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var segments=disk.Segments();
                 var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(64,lineHeight*3), Margin=new Padding(0,8,0,8) };
-                var list=MakeList(new[]{"Partición / intervalo","Tamaño","Libre"});list.Name="partition-list";list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
-                list.Columns[0].Width=350;list.Columns[1].Width=(int)(115*DeviceDpi/96f);list.Columns[2].Width=(int)(115*DeviceDpi/96f);
+                var list=MakeList(new[]{"Partición","Sistema de archivos","Montaje","Etiqueta","Tamaño","Usado","Libre","Indicadores"});list.Name="partition-list";list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
+                int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
-                    var item=new ListViewItem(new[]{p.Title,Space(p.Size),p.Free.HasValue?Space(p.Free.Value):"No disponible"}) {Tag=p,ToolTipText=p.Title};list.Items.Add(item);
+                    var queued=pendingResizes.FirstOrDefault(q=>q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
+                    string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
+                    var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title};list.Items.Add(item);
                 }
                 int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;
                 int listHeight=lineHeight*(Math.Max(3,Math.Min(8,rowCount))+2)+SystemInformation.HorizontalScrollBarHeight+12;
@@ -106,7 +108,7 @@ internal sealed partial class MainForm
                 list.Margin=Padding.Empty;
                 map.Selected+=(p)=> { SelectPartition(disk,p); foreach(ListViewItem row in list.Items)row.Selected=ReferenceEquals(row.Tag,p); };
                 list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;var p=(PartitionLayout)list.SelectedItems[0].Tag;map.Selection=p;map.Invalidate();SelectPartition(disk,p);};
-                list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(180,width-list.Columns[1].Width-list.Columns[2].Width);};
+                list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(220,(int)(width*0.22));};
                 group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(200,group.Width-30),0);
                 group.Controls.Add(heading,0,0);group.Controls.Add(map,0,1);group.Controls.Add(list,0,2);diskMaps.Controls.Add(group);
                 if(list.Items.Count>0){var first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
@@ -122,12 +124,12 @@ internal sealed partial class MainForm
             using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle,UniqueId FROM MSFT_Disk"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             { result.Add(new DiskLayout { UniqueId=Value(row,"UniqueId"),Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
-            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,MbrType FROM MSFT_Partition"))
+            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,MbrType,IsBoot,IsSystem FROM MSFT_Partition"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             {
                 var disk=result.FirstOrDefault(d=>d.Number==Convert.ToUInt32(row["DiskNumber"]));if(disk==null)continue;
                 string letter=Convert.ToString(row["DriveLetter"]).Trim('\0',' ');
-                disk.Partitions.Add(new PartitionLayout { Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,Type=PartitionType(Value(row,"GptType"),Value(row,"MbrType")) });
+                disk.Partitions.Add(new PartitionLayout { IsBoot=Convert.ToBoolean(row["IsBoot"]),IsSystem=Convert.ToBoolean(row["IsSystem"]),Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,Type=PartitionType(Value(row,"GptType"),Value(row,"MbrType")) });
             }
             foreach(var disk in result) { disk.Complete=true; disk.ReadNote="Fuente: Storage WMI · selecciona un bloque o una fila"; }
         }

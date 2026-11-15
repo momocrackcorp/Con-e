@@ -65,7 +65,7 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.9.0-portable
+          name: Con-E-v0.10.0-portable
           path: output/
           if-no-files-found: error
 
@@ -82,7 +82,6 @@ jobs:
           Copy-Item WinPart/README.md partition-output/README.md
       - uses: actions/upload-artifact@v4
         with:
-          name: WinPart-v0.1.0-portable
+          name: WinPart-v0.2.0-portable
           path: partition-output/
           if-no-files-found: error
-

@@ -36,6 +36,7 @@ internal sealed partial class MainForm
         Action<string,string> add = (k,v) => data.Summary.Add(new[] {k,v});
         int slots = 0; bool slotsKnown = false;
         Query(data, "Ranuras RAM", "SELECT MemoryDevices FROM Win32_PhysicalMemoryArray WHERE Use=3", o => { int n; if (int.TryParse(Value(o,"MemoryDevices"), out n)) { slots += n; slotsKnown = true; } });
+        CollectRamSlots(data,slotsKnown?slots:0);
         var modules = data.Hardware.Where(h => h.Category == "Memoria RAM").ToArray();
         add("Ranuras RAM", (slotsKnown ? slots + " posiciones informadas por firmware" : "Total de posiciones no disponible") + " · " + modules.Length + " módulos detectados. Puede incluir memoria soldada.");
         add("Módulos RAM", string.Join(Environment.NewLine, modules.Select(m => {

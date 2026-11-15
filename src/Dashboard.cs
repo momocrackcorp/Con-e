@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.9.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.10.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -145,7 +145,7 @@ internal sealed partial class MainForm
             Help(cpu, "Ejecuta las instrucciones de los programas. Los núcleos permiten repartir tareas.");
 
             var ram = Card("▤", "Memoria RAM");
-            Line(ram, Read("Memoria RAM instalada"), true);
+            Line(ram, current!=null&&current.Summary.Any(r=>r[0]=="Memoria instalada en módulos")?Read("Memoria instalada en módulos"):Read("Memoria RAM instalada"), true);
             if (current != null && current.RamTotalGiB.HasValue && current.RamAvailableGiB.HasValue && current.RamTotalGiB.Value > 0 && current.RamAvailableGiB.Value <= current.RamTotalGiB.Value)
             {
                 double used = current.RamTotalGiB.Value - current.RamAvailableGiB.Value;
@@ -160,7 +160,7 @@ internal sealed partial class MainForm
                 string maker; if(module.Properties.TryGetValue("Fabricante", out maker)) AddBrand(ram, maker);
             }
             Line(ram, Read("Ranuras RAM"));
-            InlineDetails(ram, "Ver módulos por ranura", "Módulos RAM");
+            RenderRamSlots(ram);
             Help(ram, "Es la memoria de trabajo de los programas abiertos. Pulsa Actualizar para obtener otra lectura; no es un monitor continuo.");
 
             var video = Card("", "Memoria de video");
@@ -249,6 +249,8 @@ internal sealed partial class MainForm
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
+                    else if(child is FlowLayoutPanel)
+                    {child.MinimumSize=new Size(inner,0);child.MaximumSize=new Size(inner,0);foreach(Control nested in child.Controls){if(nested is Label||nested is Button)nested.MaximumSize=new Size(Math.Max(60,inner-child.Padding.Horizontal),0);}}
                 }
             }
             dashboard.ResumeLayout(true);
@@ -266,6 +268,10 @@ internal sealed partial class MainForm
                 new[] { "Serie del equipo (SMBIOS)", "PRUEBA123456" }, new[] { "Nombre del equipo", "MI-PC" }, new[] { "Procesador", "Intel Core i5 · procesador de prueba" },
                 new[] { "Núcleos / procesadores lógicos", "4 / 8" }, new[] { "Memoria RAM instalada", "16 GB" }, new[] { "Windows", "Windows 11 Pro" },
                 new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
+            var module=new HardwareItem {Name="DIMM1",Category="Memoria RAM"};module.Properties["Capacidad (bytes)"]="17179869184";module.Properties["Tipo SMBIOS (código)"]="26";module.Properties["Velocidad configurada (MHz)"]="3200";module.Properties["Fabricante"]="Samsung";module.Properties["Número de pieza"]="PIEZA-PRUEBA";
+            form.current.RamSlots.Add(new RamSlot {Name="DIMM1",State="Ocupada · módulo detectado",Module=module});form.current.RamSlots.Add(new RamSlot {Name="DIMM2",State="Libre según SMBIOS"});
+            var raw=new System.Collections.Generic.List<byte>();foreach(ushort size in new ushort[]{16384,0}){var entry=new byte[21];entry[0]=17;entry[1]=21;entry[12]=(byte)size;entry[13]=(byte)(size>>8);entry[16]=1;raw.AddRange(entry);raw.AddRange(System.Text.Encoding.ASCII.GetBytes(size==0?"DIMM2":"DIMM1"));raw.Add(0);raw.Add(0);}
+            var parsed=ParseRamSlots(raw.ToArray());if(parsed.Count!=2||!parsed[0].State.StartsWith("Ocupada")||!parsed[1].State.StartsWith("Libre"))throw new InvalidOperationException("Estados SMBIOS de RAM incorrectos");
             form.current.Volumes.Add(new VolumeInfo { Name = "C:", TotalGiB = 500, FreeGiB = 320 });
             form.current.ProblemDevices.Add("audio");
             var unknown = new HardwareItem { Name = "Dispositivo PCI sin identificar (prueba)", Category = "Otros dispositivos", DeviceId = @"PCI\VEN_1234&DEV_5678\INSTANCIA", SearchId = @"PCI\VEN_1234&DEV_5678&SUBSYS_11112222&REV_01", ErrorCode = 28 };

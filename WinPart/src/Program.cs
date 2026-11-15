@@ -31,7 +31,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.1.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="WinPart · Gestor de particiones · v0.2.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
         var title=new Label {Text="WinPart · Particiones y operaciones pendientes",Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(12),ForeColor=Color.FromArgb(40,91,181)};
@@ -43,7 +43,7 @@ internal sealed partial class MainForm : Form
     {var list=new ListView {Dock=DockStyle.Fill,View=View.Details,FullRowSelect=true,HideSelection=false,MultiSelect=false};foreach(var c in columns)list.Columns.Add(c,180);return list;}
     async Task RefreshData()
     {
-        if(applyingChanges)return;actions.Enabled=false;pendingResizes.Clear();inlineEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
+        if(applyingChanges)return;actions.Enabled=false;pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();
         status.Text="Leyendo discos…";
         try{var snapshot=new Snapshot();var data=await Task.Run(()=>ReadDiskLayouts(snapshot));if(IsDisposed)return;diskLayouts.Clear();diskLayouts.AddRange(data);RenderDiskMaps();status.Text=snapshot.Warnings.Count==0?data.Count+" disco(s) · selecciona una partición.":string.Join(" | ",snapshot.Warnings);}
         catch(Exception ex){status.Text=ex.Message;}finally{if(!IsDisposed)actions.Enabled=true;}
@@ -61,6 +61,10 @@ internal sealed partial class MainForm : Form
             string dir=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"winpart.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0)throw new Exception("Fallo al descartar");
+            p.IsBoot=true;if(CanFormat(disk,p))throw new Exception("Permite formatear partición de arranque");p.IsBoot=false;p.IsSystem=true;if(CanFormat(disk,p))throw new Exception("Permite formatear partición sistema");p.IsSystem=false;
+            form.StageFormat(disk,p,"exFAT","TEST_VOLUME");if(p.FileSystem!="NTFS"||form.pendingResizes.Count!=1||!form.pendingResizes[0].Description.Contains("BORRA"))throw new Exception("Preparación de formateo incorrecta");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"filesystem-pendiente.png"),ImageFormat.Png);}
+            form.discardPending.PerformClick();if(form.pendingResizes.Count!=0)throw new Exception("No descarta formateo");
             var real=ReadDiskLayouts(new Snapshot());if(!real.Any(d=>d.Partitions.Count>0))throw new Exception("La consulta real no obtuvo particiones");
             File.WriteAllText(Path.Combine(dir,"resultado.txt"),"OK: aplicación independiente, cola visual, descarte y lectura real.");form.Close();
         }

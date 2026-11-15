@@ -219,7 +219,7 @@ internal sealed partial class MainForm
     static string PartitionType(string guid,string type)
     {
         switch(guid.Trim('{','}').ToUpperInvariant())
-        {case "C12A7328-F81F-11D2-BA4B-00A0C93EC93B":return "EFI";case "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC":return "Recuperación";case "E3C9E316-0B5C-4DB8-817D-F92DF00215AE":return "Reservada MSR";case "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7":return "Datos básicos";default:return guid=="No disponible"||guid.Length==0||guid.Trim('{','}')=="00000000-0000-0000-0000-000000000000"?(new[]{"1","4","6","7","11","12","14"}.Contains(type)?"Datos básicos MBR":"Tipo MBR "+type):"Tipo GPT "+guid;}
+        {case "C12A7328-F81F-11D2-BA4B-00A0C93EC93B":return "EFI";case "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC":return "Recuperación";case "E3C9E316-0B5C-4DB8-817D-F92DF00215AE":return "Reservada MSR";case "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7":return "Datos básicos";default:return guid=="No disponible"||guid.Length==0||guid.Trim('{','}')=="00000000-0000-0000-0000-000000000000"?(new[]{"1","4","6","7","11","12","14"}.Contains(type)?"Datos básicos MBR":"Tipo MBR "+type):"Tipo GPT "+guid.Trim('{','}').ToUpperInvariant();}
     }
 }
 internal sealed class PartitionStrip : Control

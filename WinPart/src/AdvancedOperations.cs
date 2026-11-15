@@ -117,7 +117,7 @@ internal sealed partial class MainForm
             var original=reload();var data=original.Partitions.Single(p=>p.Letter.Length==1);string file=data.Letter+@":\advanced-sentinel.txt";File.WriteAllText(file,"Conservar partición de datos");
             foreach(string type in new[]{"EFI","Recuperación","Reservada MSR","Tipo GPT 0FC63DAF-8483-4772-8E79-3D69D8477DE4"})
             {
-                var disk=reload();var part=disk.Partitions.Single(p=>p.Type.Equals(type,StringComparison.OrdinalIgnoreCase));
+                var disk=reload();var part=disk.Partitions.SingleOrDefault(p=>p.Type.Equals(type,StringComparison.OrdinalIgnoreCase));if(part==null)throw new Exception("No se encontró "+type+". Tipos leídos: "+string.Join(", ",disk.Partitions.Select(p=>p.Type)));
                 ExecuteOperations(DecodeOperations(EncodeOperations(new[]{new PendingResize {Advanced=true,Delete=true,Disk=disk,Part=part}})));
                 if(reload().Partitions.Any(p=>p.Offset==part.Offset)||File.ReadAllText(file)!="Conservar partición de datos")throw new Exception("Eliminación avanzada no confirmada o datos ajenos alterados");
             }

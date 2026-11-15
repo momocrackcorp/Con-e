@@ -45,14 +45,14 @@ internal sealed partial class MainForm
     readonly FlowLayoutPanel diskMaps = new FlowLayoutPanel { Dock=DockStyle.Fill, AutoScroll=true, FlowDirection=FlowDirection.TopDown, WrapContents=false, Padding=new Padding(14), BackColor=CanvasColor };
     readonly TextBox partitionInfo = new TextBox { Dock=DockStyle.Bottom, Multiline=true, ReadOnly=true, Height=135, ScrollBars=ScrollBars.Vertical, BackColor=Color.White, BorderStyle=BorderStyle.FixedSingle };
     readonly List<DiskLayout> diskLayouts = new List<DiskLayout>();
-    TabPage disksPage;
+    TabPage disksPage;Control operationToolbar;
     readonly Button resizePartition=new Button {Text="Ajustar tamaño",AutoSize=true,Enabled=false};
     DiskLayout selectedEditDisk; PartitionLayout selectedEditPartition;
     Control BuildDiskMap()
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
+        operationToolbar=toolbar;toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
         var legend=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(8,3,3,3)};
         foreach(string fs in new[]{"NTFS","FAT32","EXFAT","UNALLOCATED"})legend.Controls.Add(new Label {Text=fs=="UNALLOCATED"?"Sin asignar":fs,AutoSize=true,BackColor=FileSystemPalette.Get(fs),ForeColor=fs=="EXFAT"?Color.White:Color.Black,Padding=new Padding(4)});
         legend.Controls.Add(new Label {Text="Interior amarillo: usado · blanco: libre · rayado: no disponible",AutoSize=true,Margin=new Padding(6)});toolbar.Controls.Add(legend);

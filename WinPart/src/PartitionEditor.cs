@@ -127,7 +127,7 @@ internal sealed partial class MainForm
         if(applyingChanges||pendingResizes.Count==0)return;
         string summary=string.Join(Environment.NewLine,pendingResizes.Select(p=>p.Description));
         if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+"Se aplicarán las operaciones indicadas. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
-        applyingChanges=true;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
+        applyingChanges=true;operationToolbar.Enabled=false;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
         bool preserveQueue=false;
         var closeGuard=new FormClosingEventHandler((s,e)=>e.Cancel=true);FormClosing+=closeGuard;
         try
@@ -142,7 +142,7 @@ internal sealed partial class MainForm
         catch(Exception ex){MessageBox.Show(this,"La ejecución se detuvo: "+ex.Message+Environment.NewLine+"Las operaciones terminadas no se deshacen automáticamente. Se actualizará el mapa.","Resultado",MessageBoxButtons.OK,MessageBoxIcon.Information);}
         finally
         {
-            FormClosing-=closeGuard;applyingChanges=false;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;
+            FormClosing-=closeGuard;applyingChanges=false;operationToolbar.Enabled=true;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;
             if(preserveQueue)UpdatePending();
             else {pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();await RefreshData();}
         }

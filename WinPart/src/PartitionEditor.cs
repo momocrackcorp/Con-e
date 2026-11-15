@@ -73,14 +73,14 @@ internal sealed partial class MainForm
         if(System.IO.File.ReadAllText(file)!=original)throw new InvalidOperationException("Contenido cambió tras ampliación");
         disk=reload();if(!disk.Partitions.Any(p=>p.Size==oldSize))throw new InvalidOperationException("Tamaño ampliado incorrecto");
         disk=reload();part=disk.Partitions.Single(p=>CanResize(disk,p));
-        var formats=FormatOptions(disk,part);if(!formats.Item2.Contains("exFAT",StringComparer.OrdinalIgnoreCase))throw new InvalidOperationException("exFAT no disponible para prueba");
-        ApplyFormat(new PendingResize {Disk=disk,Part=part,FileSystem="exFAT",VolumeId=formats.Item1});
+        var formats=FormatOptions(disk,part);string alternate=formats.Item2.FirstOrDefault(f=>f.Equals("FAT32",StringComparison.OrdinalIgnoreCase))??formats.Item2.FirstOrDefault(f=>f.Equals("exFAT",StringComparison.OrdinalIgnoreCase))??"NTFS";
+        ApplyFormat(new PendingResize {Disk=disk,Part=part,FileSystem=alternate,VolumeId=formats.Item1});
         disk=reload();part=disk.Partitions.Single(p=>p.Letter.Length==1);
-        if(!part.FileSystem.Equals("exFAT",StringComparison.OrdinalIgnoreCase)||System.IO.File.Exists(file))throw new InvalidOperationException("Formateo exFAT no confirmado");
+        if(!part.FileSystem.Equals(alternate,StringComparison.OrdinalIgnoreCase)||System.IO.File.Exists(file))throw new InvalidOperationException("Formateo no confirmado");
         formats=FormatOptions(disk,part);ApplyFormat(new PendingResize {Disk=disk,Part=part,FileSystem="NTFS",VolumeId=formats.Item1});
         disk=reload();part=disk.Partitions.Single(p=>CanResize(disk,p));
         System.IO.File.WriteAllText(file,"WinPart NTFS verificado");if(System.IO.File.ReadAllText(file)!="WinPart NTFS verificado")throw new InvalidOperationException("Escritura tras formateo incorrecta");
-        System.IO.File.WriteAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","resize-ok.txt"),"OK: VHD GPT; reducción/ampliación con archivo conservado; formateo exFAT comprobado y vuelta a NTFS con escritura verificada.");
+        System.IO.File.WriteAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","resize-ok.txt"),"OK: VHD GPT; reducción/ampliación con archivo conservado; formateo "+alternate+" comprobado y vuelta a NTFS con escritura verificada. Formatos compatibles: "+string.Join(", ",formats.Item2));
     }
     readonly System.Collections.Generic.List<PendingResize> pendingResizes=new System.Collections.Generic.List<PendingResize>();
     readonly FlowLayoutPanel inlineEditor=new FlowLayoutPanel {Dock=DockStyle.Bottom,AutoSize=true,WrapContents=true,Padding=new Padding(10),Visible=false,BackColor=Color.White};

@@ -101,13 +101,13 @@ internal sealed partial class MainForm
                 var segments=disk.Segments();
                 var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(64,lineHeight*3), Margin=new Padding(0,8,0,8) };
                 var list=MakeList(new[]{"Partición","Sistema de archivos","Montaje","Etiqueta","Tamaño","Usado","Libre","Indicadores"});list.Name="partition-list";
-                var swatches=new ImageList {ImageSize=new Size(16,16),ColorDepth=ColorDepth.Depth32Bit};list.SmallImageList=swatches;list.Disposed+=(sender,args)=>swatches.Dispose();list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
+                var swatches=new ImageList {ImageSize=new Size(16,16),ColorDepth=ColorDepth.Depth32Bit};var swatchSources=new List<Bitmap>();list.SmallImageList=swatches;list.Disposed+=(sender,args)=>{swatches.Dispose();foreach(var image in swatchSources)image.Dispose();};list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
                 int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
                     var queued=pendingResizes.FirstOrDefault(q=>q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
                     string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
-                    var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+p.FileSystem};using(var swatch=new Bitmap(16,16)){using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,1,1,14,14);swatches.Images.Add(swatch);}
+                    var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+p.FileSystem};var swatch=new Bitmap(16,16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,1,1,14,14);swatchSources.Add(swatch);swatches.Images.Add(swatch);
                     item.ImageIndex=swatches.Images.Count-1;list.Items.Add(item);
                 }
                 int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;

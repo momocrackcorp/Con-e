@@ -25,6 +25,25 @@ jobs:
           $p = Start-Process output/Con-E.exe -ArgumentList '--smoke-test' -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'La prueba de interfaz excedió 120 segundos' }
           if ($p.ExitCode -ne 0) { Get-Content output/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló la prueba de interfaz' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Con-E-interfaz-pruebas
+          path: output/qa/
+          if-no-files-found: error
+      - name: Preparar USB
+        shell: pwsh
+        run: |
+          Remove-Item output/qa -Recurse -Force
+          Copy-Item README.md output/
+          New-Item output/Tools -ItemType Directory -Force
+          Copy-Item Tools/LEEME.txt output/Tools/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Con-E-v0.14.0-portable
+          path: output/
+          if-no-files-found: error
+
       - name: Generar icono WinPart
         shell: pwsh
         run: ./WinPart/build-icon.ps1
@@ -57,25 +76,6 @@ jobs:
             Dismount-DiskImage -ImagePath $image -ErrorAction SilentlyContinue
             Remove-Item $image -Force -ErrorAction SilentlyContinue
           }
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: Con-E-interfaz-pruebas
-          path: output/qa/
-          if-no-files-found: error
-      - name: Preparar USB
-        shell: pwsh
-        run: |
-          Remove-Item output/qa -Recurse -Force
-          Copy-Item README.md output/
-          New-Item output/Tools -ItemType Directory -Force
-          Copy-Item Tools/LEEME.txt output/Tools/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Con-E-v0.14.0-portable
-          path: output/
-          if-no-files-found: error
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:

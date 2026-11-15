@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Management;
 
-internal sealed class StorageDeviceInfo {public string Model="No disponible",Type="No disponible",Health="No disponible";public int? Temperature;}
+internal sealed class StorageDeviceInfo {public string Model="No disponible",Type="No disponible",Health="No disponible",Serial="";public int? Temperature;public uint? DiskNumber;public ulong? PowerOnHours;public string ManufactureDate="No disponible";}
 internal sealed class StorageIo {public double? Read,Write;}
 internal static class StorageTelemetry
 {
@@ -26,12 +26,12 @@ internal static class StorageTelemetry
             using(var q=Query(@"\\.\root\cimv2","SELECT * FROM Win32_LogicalDisk WHERE DeviceID='"+letter+"'"))using(var rows=q.Get())foreach(ManagementObject row in rows)using(row)
             using(var parts=row.GetRelated("Win32_DiskPartition"))foreach(ManagementObject p in parts)using(p)numbers.Add(Convert.ToUInt32(p["DiskIndex"]));
             if(numbers.Count!=1){if(numbers.Count>1)info.Model="Volumen sobre varios discos";return info;}
-            uint number=numbers.Single();string id="";
+            uint number=numbers.Single();info.DiskNumber=number;string id="";
             using(var q=Query(@"\\.\root\Microsoft\Windows\Storage","SELECT * FROM MSFT_Disk WHERE Number="+number))using(var rows=q.Get())foreach(ManagementObject disk in rows)using(disk)
             {
-                info.Model=Text(disk,"FriendlyName");id=Text(disk,"UniqueId");int bus=Convert.ToInt32(disk["BusType"]);
+                info.Model=Text(disk,"FriendlyName");info.Serial=Text(disk,"SerialNumber");id=Text(disk,"UniqueId");int bus=Convert.ToInt32(disk["BusType"]);
                 info.Type=bus==17?"NVMe":bus==11?"SATA":bus==7?"USB":bus==12?"Tarjeta SD":bus==13?"MMC / eMMC":bus==15?"Disco virtual VHD":"Tipo no informado";
-                try{using(var counters=disk.GetRelated("MSFT_StorageReliabilityCounter"))foreach(ManagementObject counter in counters)using(counter){int temp;if(int.TryParse(Text(counter,"Temperature"),out temp)&&temp>0&&temp<150)info.Temperature=temp;}}catch{}
+                try{using(var counters=disk.GetRelated("MSFT_StorageReliabilityCounter"))foreach(ManagementObject counter in counters)using(counter){int temp;if(int.TryParse(Text(counter,"Temperature"),out temp)&&temp>0&&temp<150)info.Temperature=temp;ulong hours;if(ulong.TryParse(Text(counter,"PowerOnHours"),out hours))info.PowerOnHours=hours;string manufactured=Text(counter,"ManufactureDate");if(!string.IsNullOrWhiteSpace(manufactured))info.ManufactureDate=manufactured+" (informado por dispositivo)";}}catch{}
             }
             // Match actual persistent identifiers, never assume PhysicalDisk.DeviceId equals Disk.Number.
             if(id.Length>0)using(var q=Query(@"\\.\root\Microsoft\Windows\Storage","SELECT UniqueId,MediaType,HealthStatus FROM MSFT_PhysicalDisk"))using(var rows=q.Get())foreach(ManagementObject physical in rows)using(physical)

@@ -33,7 +33,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.13.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.14.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -342,7 +342,7 @@ internal sealed partial class MainForm
             form.hardwareList.Items[0].Selected = true; form.hardwareList.Focus(); Application.DoEvents();
             if (form.selectedHardware != unknown || form.hardwareDetails.Items.Count == 0) throw new InvalidOperationException("Ficha de hardware ausente");
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "hardware-desconocido.png"), ImageFormat.Png); }
-            StorageSmokeTest(form,dir);
+            StorageSmokeTest(form,dir);SensorSmokeTest(form,dir);
             form.tabs.SelectedIndex = 0; form.current = new Snapshot(); form.RenderDashboard(); Application.DoEvents();
             form.Scale(new SizeF(2, 2)); form.ResizeCards(); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-escala-doble.png"), ImageFormat.Png); }

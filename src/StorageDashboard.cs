@@ -15,7 +15,7 @@ internal sealed partial class MainForm
         if(current==null||current.Volumes.Count==0){status.Text="No hay unidades legibles disponibles.";return;}
         if(storageView==null||storageView.IsDisposed)
         {
-            storageView=new StorageView(!Environment.GetCommandLineArgs().Contains("--smoke-test"));storagePage=new TabPage("Uso del disco") {BackColor=CanvasColor};storagePage.Controls.Add(storageView);tabs.TabPages.Add(storagePage);
+            storageView=new StorageView(!Environment.GetCommandLineArgs().Contains("--smoke-test"));storageView.SensorsRequested+=OpenSensors;storagePage=new TabPage("Uso del disco") {BackColor=CanvasColor};storagePage.Controls.Add(storageView);tabs.TabPages.Add(storagePage);
         }
         tabs.SelectedTab=storagePage;storageView.SetVolumes(current.Volumes,name);
     }
@@ -33,7 +33,7 @@ internal sealed partial class MainForm
             form.Size=new Size(1100,820);form.tabs.SelectedIndex=0;form.dashboard.ScrollControlIntoView(form.cards.First(c=>Convert.ToString(c.Tag)=="Almacenamiento"));Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"almacenamiento-tarjeta.png"),ImageFormat.Png);}
             form.OpenStorage("C:");Application.DoEvents();var v=new VolumeInfo {Name="C:",Label="SISTEMA · ejemplo",FileSystem="NTFS",TotalGiB=500,FreeGiB=320};form.storageView.SetVolumes(new[]{v});
             var display=new StorageScan {Total=500L*1073741824,Free=320L*1073741824,Files=12500,Skipped=3,LinksSkipped=100,Elapsed=TimeSpan.FromSeconds(4.2)};
-            display.Groups.Add(new StorageGroup {Name="Users",Bytes=90L*1073741824});display.Groups.Add(new StorageGroup {Name="Program Files",Bytes=50L*1073741824});display.Groups.Add(new StorageGroup {Name="Windows",Bytes=30L*1073741824});display.Groups.Add(new StorageGroup {Name="Archivos en raíz",Bytes=2L*1073741824});form.storageView.ShowResult(v,display);Application.DoEvents();
+            display.Groups.Add(new StorageGroup {Name="Users",Bytes=90L*1073741824});display.Groups.Add(new StorageGroup {Name="Program Files",Bytes=50L*1073741824});display.Groups.Add(new StorageGroup {Name="Windows",Bytes=30L*1073741824});display.Groups.Add(new StorageGroup {Name="Archivos en raíz",Bytes=2L*1073741824});form.storageView.ShowResult(v,display);form.storageView.ApplyAdvanced(new DiskReading {Status="Good",Temperature=38,Life=97,Hours=2048,ReadGB=12500,WrittenGB=8200});Application.DoEvents();
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"almacenamiento-carpetas.png"),ImageFormat.Png);}
             form.storageView.FocusCapacity();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"almacenamiento-capacidad.png"),ImageFormat.Png);}
             form.Width=690;Application.DoEvents();form.storageView.FocusAnalysis();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"almacenamiento-estrecho.png"),ImageFormat.Png);}

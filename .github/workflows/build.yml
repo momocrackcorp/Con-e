@@ -15,6 +15,10 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Compilar
         run: dotnet build src/Con-E.csproj -c Release -o output
+      - name: Preparar dependencias y licencias de sensores
+        shell: pwsh
+        run: |
+          ./build-sensor-dependencies.ps1
       - name: Comprobar interfaz con datos simulados
         shell: pwsh
         run: |
@@ -68,7 +72,7 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.13.0-portable
+          name: Con-E-v0.14.0-portable
           path: output/
           if-no-files-found: error
 

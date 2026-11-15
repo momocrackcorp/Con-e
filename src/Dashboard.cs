@@ -1,3 +1,4 @@
+using UIModernization;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -14,10 +15,10 @@ internal sealed class VolumeInfo
 
 internal sealed partial class MainForm
 {
-    static readonly Color CanvasColor = Color.FromArgb(241, 244, 248);
-    static readonly Color TextColor = Color.FromArgb(35, 50, 71);
-    static readonly Color MutedColor = Color.FromArgb(80, 98, 121);
-    static readonly Color BlueColor = Color.FromArgb(40, 91, 181);
+    static readonly Color CanvasColor = ModernTheme.Canvas;
+    static readonly Color TextColor = ModernTheme.Text;
+    static readonly Color MutedColor = ModernTheme.Muted;
+    static readonly Color BlueColor = ModernTheme.Accent;
     readonly FlowLayoutPanel dashboard = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, WrapContents = true, Padding = new Padding(14), BackColor = CanvasColor };
     readonly List<FlowLayoutPanel> cards = new List<FlowLayoutPanel>();
     readonly List<Label> helpLabels = new List<Label>();
@@ -28,10 +29,10 @@ internal sealed partial class MainForm
 
     Control BuildHeader()
     {
-        var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
+        var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.11.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.12.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -60,14 +61,14 @@ internal sealed partial class MainForm
     }
     void AddBrand(FlowLayoutPanel card, string manufacturer)
     {
-        string brand = BrandLogo.Resolve(manufacturer);
-        if(brand == null || card.Controls.OfType<BrandLogo>().Any(c => c.Brand == brand)) return;
-        var logo = new BrandLogo(brand); card.Controls.Add(logo); card.Controls.SetChildIndex(logo, Math.Min(2,card.Controls.Count-1));
+        string brand = BrandLogo.Resolve(manufacturer);var header=card.Controls.OfType<FlowLayoutPanel>().FirstOrDefault(c=>c.Name=="card-heading");
+        if(brand==null||header==null||header.Controls.OfType<BrandLogo>().Any(c=>c.Brand==brand))return;
+        header.Controls.Add(new BrandLogo(brand) {Width=76,Height=38,BackColor=Color.FromArgb(245,247,250),Margin=new Padding(6,0,0,4)});
     }
     Button ActionButton(string caption, Action action)
     {
-        var button = new Button { Text = caption, AutoSize = true, Padding = new Padding(5), Margin = new Padding(0, 8, 0, 0), FlatStyle = FlatStyle.Flat, BackColor = Color.White, ForeColor = BlueColor };
-        button.FlatAppearance.BorderColor = Color.FromArgb(200, 213, 230);
+        var button = new Button { Text = caption, AutoSize = true, Padding = new Padding(5), Margin = new Padding(0, 8, 0, 0), FlatStyle = FlatStyle.Flat, BackColor = ModernTheme.Surface, ForeColor = BlueColor };
+        StyleAction(button);
         button.Click += (s, e) => { try { action(); } catch (Exception ex) { MessageBox.Show(ex.Message, "Con-E"); } };
         return button;
     }
@@ -79,10 +80,11 @@ internal sealed partial class MainForm
     }
     FlowLayoutPanel Card(string glyph, string title)
     {
-        var card = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(18), Margin = new Padding(7), BackColor = Color.White, Width = 300 };
-        var heading = new Label { Text = title, AutoSize = true, Font = new Font(Font, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 0, 14) };
-        card.Controls.Add(new ComponentPicture { Kind = title == "Almacenamiento" ? title + " " + Read("Tipos de almacenamiento") : title, Width = 108, Height = 78, AccessibleName = title, Margin = new Padding(0, 0, 0, 10) });
-        card.Controls.Add(heading); cards.Add(card); dashboard.Controls.Add(card); return card;
+        var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=ModernTheme.Border,BorderRadius=12,Width=300,Tag=title };
+        var header=new FlowLayoutPanel {Name="card-heading",AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,BackColor=ModernTheme.Surface,Margin=new Padding(0,0,0,14)};
+        header.Controls.Add(new ComponentPicture {Kind=title=="Almacenamiento"?title+" "+Read("Tipos de almacenamiento"):title,Width=42,Height=42,AccessibleName=title,Margin=new Padding(0,0,8,0)});
+        header.Controls.Add(new Label {Text=title,AutoSize=true,Font=new Font(Font.FontFamily,11,FontStyle.Bold),ForeColor=BlueColor,Margin=new Padding(0,10,0,0)});
+        card.Controls.Add(header);cards.Add(card);dashboard.Controls.Add(card);return card;
     }
     Label Line(FlowLayoutPanel card, string text, bool prominent = false)
     {
@@ -109,6 +111,7 @@ internal sealed partial class MainForm
             bool expanded = !expandedCards.Contains(title);
             if (expanded) expandedCards.Add(title); else expandedCards.Remove(title);
             foreach (var label in labels) label.Visible = expanded;
+            if(title=="Ver detalle del procesador")foreach(var diagram in card.Controls.OfType<CoreDiagram>())diagram.Visible=expanded;
             toggle.Text = expanded ? "Ocultar detalles" : title;
             ResizeCards();
         });
@@ -138,14 +141,17 @@ internal sealed partial class MainForm
             Help(identity, "El modelo y la serie son los datos registrados por el fabricante en el equipo.");
 
             var cpu = Card("⚙", "Procesador");
+            lblCpuValue=Line(cpu,"Sin lectura",true);lblCpuValue.Font=new Font(Font.FontFamily,24,FontStyle.Bold);
+            barCpuUsage=new ModernProgressBar {Width=240,Height=14,IsAvailable=false,FillColor=ModernTheme.Accent,TrackColor=ModernTheme.Track,Margin=new Padding(0,4,0,6)};cpu.Controls.Add(barCpuUsage);
+            lblCpuSample=Line(cpu,"CPU: esperando lectura WMI");UpdateCpuControls(lastCpuMetric);
             AddBrand(cpu, Read("Marca del procesador"));
             Line(cpu, Read("Marca del procesador"), true);
             Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
             if(current!=null&&current.CoreThreads.Count>0)
             {
                 Line(cpu,current.CoreThreads.Count+" núcleos físicos · "+current.CoreThreads.Sum()+" hilos lógicos",true);
-                cpu.Controls.Add(new CoreDiagram(current.CoreThreads));
-                Line(cpu,"Cada cuadro representa un núcleo; los hilos son los procesadores lógicos asociados. No es un medidor de uso.");
+                cpu.Controls.Add(new CoreDiagram(current.CoreThreads) {Visible=expandedCards.Contains("Ver detalle del procesador")});
+                Help(cpu,"El diagrama de detalle representa núcleos e hilos. La barra superior muestra uso real de CPU y se actualiza sin reconstruir las tarjetas.");
             }
             else Line(cpu,"Distribución de hilos por núcleo no disponible.");
             InlineDetails(cpu,"Ver detalle del procesador","Procesador","Núcleos / procesadores lógicos","Marca del procesador");
@@ -219,7 +225,7 @@ internal sealed partial class MainForm
             var driver = Card("⚒", "Controladores");
             var driverText = current == null ? "Pendiente de lectura" : !current.PnpReadComplete ? "Lectura PnP incompleta" : current.ProblemDevices.Count == 0 ? "Sin error PnP informado" : current.ProblemDevices.Count + " dispositivo(s) por revisar";
             var driverState = Line(driver, driverText, true);
-            if (current != null && (current.ProblemDevices.Count > 0 || !current.PnpReadComplete)) driverState.ForeColor = Color.FromArgb(140, 85, 0);
+            if (current != null && (current.ProblemDevices.Count > 0 || !current.PnpReadComplete)) driverState.ForeColor = Color.FromArgb(255,190,97);
             Line(driver, current == null ? "" : current.Drivers.Count + " dispositivos en inventario");
             driver.Controls.Add(ActionButton("Revisar dispositivos", () => tabs.SelectedTab = driverPage));
             Help(driver, "Permiten que Windows se comunique con el hardware. La ausencia de errores PnP no garantiza buen funcionamiento.");
@@ -253,7 +259,7 @@ internal sealed partial class MainForm
                 foreach (Control child in card.Controls)
                 {
                     if (child is Label) child.MaximumSize = new Size(inner, 0);
-                    else if (child is UsageBar || child is CoreDiagram) child.Width = inner;
+                    else if (child is ModernProgressBar || child is CoreDiagram) child.Width = inner;
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
@@ -264,6 +270,10 @@ internal sealed partial class MainForm
             dashboard.ResumeLayout(true);
         }
         finally { resizingCards = false; }
+    }
+    static void PumpUntil(Func<bool> done,int timeout)
+    {
+        var watch=System.Diagnostics.Stopwatch.StartNew();while(!done()){if(watch.ElapsedMilliseconds>timeout)throw new TimeoutException("La operación asíncrona no terminó durante la prueba");Application.DoEvents();System.Threading.Thread.Sleep(5);}Application.DoEvents();
     }
     internal static void SmokeTest()
     {
@@ -294,6 +304,17 @@ internal sealed partial class MainForm
             unknown.Properties["Controlador"] = "No instalado (ejemplo)";
             form.current.Hardware.Add(unknown);
             form.RenderDashboard(); form.RenderHardwareBrowser(); form.Show(); Application.DoEvents();
+            int uiThread=System.Threading.Thread.CurrentThread.ManagedThreadId,workerThread=uiThread,activeReads=0,maxReads=0,samples=0;
+            var firstCpuCard=form.cards[0];
+            form.StartCpuMonitor(()=>{workerThread=System.Threading.Thread.CurrentThread.ManagedThreadId;int active=System.Threading.Interlocked.Increment(ref activeReads);maxReads=Math.Max(maxReads,active);System.Threading.Thread.Sleep(30);System.Threading.Interlocked.Decrement(ref activeReads);System.Threading.Interlocked.Increment(ref samples);return new CpuMetric {Percent=42.5f,Detail="Muestra simulada de prueba"};},20);
+            PumpUntil(()=>samples>=3&&form.barCpuUsage.Value==42.5f,5000);
+            if(workerThread==uiThread||maxReads!=1||!ReferenceEquals(firstCpuCard,form.cards[0])||form.lblCpuValue.Text!=42.5f.ToString("0.0")+" %")throw new InvalidOperationException("Métricas en hilo incorrecto, solapadas o sin actualizar interfaz");
+            form.StopCpuMonitor();PumpUntil(()=>form.cpuMonitorTask.IsCompleted,1500);
+            form.UpdateCpuControls(new CpuMetric {Detail="Sin proveedor de prueba"});if(form.barCpuUsage.IsAvailable||form.lblCpuValue.Text!="Sin lectura")throw new InvalidOperationException("Presenta CPU inventada cuando falla WMI");form.UpdateCpuControls(form.lastCpuMetric);
+            var live=System.Threading.Tasks.Task.Run(()=>GetCpuUsageFromWmi());PumpUntil(()=>live.IsCompleted,15000);
+            string actual;try{var sample=live.GetAwaiter().GetResult();actual=sample.Percent.HasValue?"CPU WMI real: "+sample.Percent.Value:"Sin muestra WMI: "+sample.Detail;}catch(Exception ex){actual="Proveedor no disponible; UI debe reintentar: "+ex.Message;}
+            File.WriteAllText(Path.Combine(dir,"metricas.txt"),"OK: consulta fuera de UI, 3 muestras sin solaparse, actualización en UI, tarjetas sin reconstruir, cancelación y ausencia de datos. "+actual);
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"moderno-cpu.png"),ImageFormat.Png);}
             if(BrandLogo.Resolve("HP Inc.") != "hp" || BrandLogo.Resolve("Advanced Micro Devices, Inc.") != "amd" || BrandLogo.Resolve("Fabricante desconocido") != null) throw new InvalidOperationException("Detección de marca incorrecta");
             foreach(string brand in new[] { "intel", "amd", "arm", "hp", "dell", "lenovo", "asus", "acer", "nvidia", "samsung", "qualcomm" }) if(BrandLogo.Get(brand).Width == 0) throw new InvalidOperationException("Logo inválido");
             var biosCard = form.cards.First(c => c.Controls.OfType<Button>().Any(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie"));
@@ -333,14 +354,7 @@ internal sealed partial class MainForm
         }
     }
 }
-internal sealed class UsageBar : Control
+internal sealed class UsageBar : ModernProgressBar
 {
-    public double Value;
-    public UsageBar() { SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true); }
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-        using (var background = new SolidBrush(Color.FromArgb(231, 237, 245))) e.Graphics.FillRectangle(background, ClientRectangle);
-        using (var fill = new SolidBrush(Color.FromArgb(70, 121, 201))) e.Graphics.FillRectangle(fill, 0, 0, (int)(Width * Value / 100), Height);
-    }
+    public new double Value {get{return base.Value;}set{base.Value=(float)value;}}
 }

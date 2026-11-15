@@ -1,3 +1,4 @@
+using UIModernization;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -48,10 +49,10 @@ internal sealed class CoreDiagram : Control
         for(int i=0;i<Math.Min(256,Threads.Count);i++)
         {
             var tile=new Rectangle(i%columns*width+3,i/columns*height+3,width-6,height-6);
-            using(var fill=new SolidBrush(Color.FromArgb(233,241,253)))e.Graphics.FillRectangle(fill,tile);
-            using(var pen=new Pen(Color.FromArgb(70,121,201)))e.Graphics.DrawRectangle(pen,tile);
-            TextRenderer.DrawText(e.Graphics,"Núcleo "+(i+1),Font,new Rectangle(tile.X+3,tile.Y+3,tile.Width-6,Font.Height+4),Color.FromArgb(35,50,71),TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(e.Graphics,Threads[i]+(Threads[i]==1?" hilo":" hilos"),Font,new Rectangle(tile.X+3,tile.Y+Font.Height+7,tile.Width-6,Font.Height+4),Color.FromArgb(40,91,181),TextFormatFlags.HorizontalCenter);
+            using(var fill=new SolidBrush(ModernTheme.Raised))e.Graphics.FillRectangle(fill,tile);
+            using(var pen=new Pen(ModernTheme.Accent))e.Graphics.DrawRectangle(pen,tile);
+            TextRenderer.DrawText(e.Graphics,"Núcleo "+(i+1),Font,new Rectangle(tile.X+3,tile.Y+3,tile.Width-6,Font.Height+4),ModernTheme.Text,TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(e.Graphics,Threads[i]+(Threads[i]==1?" hilo":" hilos"),Font,new Rectangle(tile.X+3,tile.Y+Font.Height+7,tile.Width-6,Font.Height+4),ModernTheme.Accent,TextFormatFlags.HorizontalCenter);
             for(int t=0;t<Math.Min(Threads[i],8);t++)e.Graphics.FillRectangle(Brushes.SteelBlue,tile.X+8+t*10,tile.Bottom-9,6,5);
         }
     }

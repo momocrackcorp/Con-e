@@ -1,3 +1,4 @@
+using UIModernization;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -64,7 +65,7 @@ internal sealed partial class MainForm
         if(current==null)return;
         foreach(var slot in current.RamSlots)
         {
-            var panel=new FlowLayoutPanel {FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,BackColor=Color.FromArgb(239,244,251),Padding=new Padding(8),Margin=new Padding(0,5,0,5)};
+            var panel=new FlowLayoutPanel {FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,BackColor=ModernTheme.Raised,Padding=new Padding(8),Margin=new Padding(0,5,0,5)};
             panel.Controls.Add(new SlotPicture {Occupied=slot.Module!=null||slot.State.StartsWith("Ocupada"),Width=145,Height=38,AccessibleName=slot.Name+": "+slot.State});
             Line(panel,slot.Name,true);Line(panel,slot.State);
             if(slot.Module!=null)
@@ -86,9 +87,9 @@ internal sealed class SlotPicture : Control
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);var box=new Rectangle(3,5,Width-8,25);
-        using(var brush=new SolidBrush(Occupied?Color.FromArgb(52,127,85):Color.FromArgb(218,225,235)))e.Graphics.FillRectangle(brush,box);
+        using(var brush=new SolidBrush(Occupied?Color.FromArgb(52,127,85):ModernTheme.Track))e.Graphics.FillRectangle(brush,box);
         using(var pen=new Pen(Color.FromArgb(75,95,115),2))e.Graphics.DrawRectangle(pen,box);
         if(Occupied)for(int i=0;i<4;i++){e.Graphics.FillRectangle(Brushes.DarkSlateGray,12+i*28,10,20,14);e.Graphics.FillRectangle(Brushes.Goldenrod,12+i*28,30,20,4);}
-        else TextRenderer.DrawText(e.Graphics,"Sin módulo",Font,box,Color.FromArgb(60,75,90),TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+        else TextRenderer.DrawText(e.Graphics,"Sin módulo",Font,box,ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
     }
 }

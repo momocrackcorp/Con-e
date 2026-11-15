@@ -1,3 +1,4 @@
+using UIModernization;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,12 +47,12 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.11.0";
+        Text = "Con-E · Diagnóstico y herramientas · v0.12.0";
         BackColor = CanvasColor;
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
-        tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
+        tabs = new ModernTabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
         var home = new TabPage("Mi equipo") { BackColor = CanvasColor }; home.Controls.Add(dashboard); tabs.TabPages.Add(home);
         var first = new TabPage("Detalles técnicos"); first.Controls.Add(summary);
         driverPage = new TabPage("Hardware y controladores"); driverPage.Controls.Add(BuildHardwareBrowser()); tabs.TabPages.Add(driverPage);
@@ -71,8 +72,8 @@ internal sealed partial class MainForm : Form
         Controls.Add(tabs); Controls.Add(actions); Controls.Add(BuildHeader()); Controls.Add(status);
         dashboard.Resize += (s, e) => ResizeCards();
         summary.ShowItemToolTips=true;summary.Resize+=(s,e)=>ResizeSummary();
-        RenderDashboard();
-        Shown += async (s, e) => { if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) await RefreshData(); };
+        RenderDashboard();InitializeModernUI();
+        Shown += async (s, e) => { if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) {StartCpuMonitor();await RefreshData();} };
     }
 
     void ResizeSummary()
@@ -83,14 +84,16 @@ internal sealed partial class MainForm : Form
     }
     static ListView MakeList(string[] columns)
     {
-        var list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, GridLines = true, HideSelection = false };
+        var list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, GridLines = false, HideSelection = false,BorderStyle=BorderStyle.None,BackColor=ModernTheme.Surface,ForeColor=ModernTheme.Text,OwnerDraw=true };
         foreach (var col in columns) list.Columns.Add(col, col == "Valor" ? 600 : col == "Dispositivo" ? 270 : 170);
+        list.DrawColumnHeader+=(s,e)=>{using(var brush=new SolidBrush(ModernTheme.Raised))e.Graphics.FillRectangle(brush,e.Bounds);TextRenderer.DrawText(e.Graphics,e.Header.Text,list.Font,Rectangle.Inflate(e.Bounds,-6,0),ModernTheme.Muted,TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);};
+        list.DrawItem+=(s,e)=>e.DrawDefault=true;list.DrawSubItem+=(s,e)=>e.DrawDefault=true;
         return list;
     }
     void AddButton(string title, Action action)
     {
         var button = new Button { Text = title, AutoSize = true, Padding = new Padding(5), Margin = new Padding(4) };
-        button.Click += (s, e) => { try { action(); } catch (Exception ex) { MessageBox.Show(ex.Message, "Con-E"); } };
+        StyleAction(button);button.Click += (s, e) => { try { action(); } catch (Exception ex) { MessageBox.Show(ex.Message, "Con-E"); } };
         actions.Controls.Add(button);
     }
     async Task RefreshData()
@@ -199,7 +202,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.11.0\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.12.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

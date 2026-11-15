@@ -31,7 +31,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = Color.White, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.10.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.11.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -141,6 +141,14 @@ internal sealed partial class MainForm
             AddBrand(cpu, Read("Marca del procesador"));
             Line(cpu, Read("Marca del procesador"), true);
             Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
+            if(current!=null&&current.CoreThreads.Count>0)
+            {
+                Line(cpu,current.CoreThreads.Count+" núcleos físicos · "+current.CoreThreads.Sum()+" hilos lógicos",true);
+                cpu.Controls.Add(new CoreDiagram(current.CoreThreads));
+                Line(cpu,"Cada cuadro representa un núcleo; los hilos son los procesadores lógicos asociados. No es un medidor de uso.");
+            }
+            else Line(cpu,"Distribución de hilos por núcleo no disponible.");
+            InlineDetails(cpu,"Ver detalle del procesador","Procesador","Núcleos / procesadores lógicos","Marca del procesador");
             cpu.Controls.Add(ActionButton("Explorar componentes", () => tabs.SelectedTab = driverPage));
             Help(cpu, "Ejecuta las instrucciones de los programas. Los núcleos permiten repartir tareas.");
 
@@ -245,7 +253,7 @@ internal sealed partial class MainForm
                 foreach (Control child in card.Controls)
                 {
                     if (child is Label) child.MaximumSize = new Size(inner, 0);
-                    else if (child is UsageBar) child.Width = inner;
+                    else if (child is UsageBar || child is CoreDiagram) child.Width = inner;
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
@@ -272,6 +280,8 @@ internal sealed partial class MainForm
             form.current.RamSlots.Add(new RamSlot {Name="DIMM1",State="Ocupada · módulo detectado",Module=module});form.current.RamSlots.Add(new RamSlot {Name="DIMM2",State="Libre según SMBIOS"});
             var raw=new System.Collections.Generic.List<byte>();foreach(ushort size in new ushort[]{16384,0}){var entry=new byte[21];entry[0]=17;entry[1]=21;entry[12]=(byte)size;entry[13]=(byte)(size>>8);entry[16]=1;raw.AddRange(entry);raw.AddRange(System.Text.Encoding.ASCII.GetBytes(size==0?"DIMM2":"DIMM1"));raw.Add(0);raw.Add(0);}
             var parsed=ParseRamSlots(raw.ToArray());if(parsed.Count!=2||!parsed[0].State.StartsWith("Ocupada")||!parsed[1].State.StartsWith("Libre"))throw new InvalidOperationException("Estados SMBIOS de RAM incorrectos");
+            form.current.CoreThreads.AddRange(new[]{2,2,2,2,2,2,2,2,1,1,1,1});
+            var topology=CpuTopology.Read();if(topology.Count==0||topology.Sum()==0)throw new InvalidOperationException("No se obtuvo topología real de CPU");
             form.current.Volumes.Add(new VolumeInfo { Name = "C:", TotalGiB = 500, FreeGiB = 320 });
             form.current.ProblemDevices.Add("audio");
             var unknown = new HardwareItem { Name = "Dispositivo PCI sin identificar (prueba)", Category = "Otros dispositivos", DeviceId = @"PCI\VEN_1234&DEV_5678\INSTANCIA", SearchId = @"PCI\VEN_1234&DEV_5678&SUBSYS_11112222&REV_01", ErrorCode = 28 };

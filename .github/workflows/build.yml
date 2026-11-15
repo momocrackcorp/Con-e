@@ -65,7 +65,7 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.10.0-portable
+          name: Con-E-v0.11.0-portable
           path: output/
           if-no-files-found: error
 
@@ -80,8 +80,17 @@ jobs:
         run: |
           Remove-Item partition-output/qa -Recurse -Force
           Copy-Item WinPart/README.md partition-output/README.md
+          Copy-Item WinPart/COPYING partition-output/COPYING
+          Copy-Item WinPart/THIRD_PARTY_NOTICES.md partition-output/THIRD_PARTY_NOTICES.md
+          New-Item partition-output/source/src -ItemType Directory -Force
+          Copy-Item WinPart/src/*.cs partition-output/source/src/
+          Copy-Item WinPart/src/*.csproj partition-output/source/src/
+          Copy-Item WinPart/README.md partition-output/source/
+          Copy-Item WinPart/COPYING partition-output/source/
+          Copy-Item WinPart/THIRD_PARTY_NOTICES.md partition-output/source/
+          Copy-Item WinPart/upstream partition-output/source/upstream -Recurse
       - uses: actions/upload-artifact@v4
         with:
-          name: WinPart-v0.2.0-portable
+          name: WinPart-v0.3.0-portable
           path: partition-output/
           if-no-files-found: error

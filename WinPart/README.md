@@ -1,4 +1,4 @@
-# WinPart v0.2.0 (nombre provisional)
+# WinPart v0.3.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -8,16 +8,16 @@ Mapa visual de discos, lista de particiones y ficha; editor de tamaño por arras
 
 ## Pendiente para un gestor completo
 
-Crear, eliminar, formatear, mover, copiar particiones y más sistemas de archivos. No es un port de GParted: todavía no incorpora código de GParted/libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
+Crear, eliminar, formatear, mover, copiar particiones y más sistemas de archivos. No es un port completo de GParted: adapta la paleta de Utils::get_color; no incorpora el motor libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
 
 ## Compilar
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.2.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.3.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
-## Sistemas de archivos v0.2.0
+## Sistemas de archivos v0.3.0
 
 Columnas Partición, Sistema de archivos, Montaje, Etiqueta, Tamaño, Usado, Libre e Indicadores. Windows proporciona tamaños de volúmenes con letra; las particiones sin volumen consultable muestran datos desconocidos.
 
@@ -28,3 +28,12 @@ La edición de formato está limitada a volúmenes con letra sobre GPT de datos 
 Sólo hay una operación pendiente por partición: preparar un formateo sustituye un redimensionamiento pendiente de esa partición y viceversa. La ejecución de varias operaciones no es transaccional y no tiene rollback.
 
 Prueba en VHD desechable: reducir/ampliar NTFS conservando archivo; formatear exFAT y verificar desaparición del archivo y nuevo formato; formatear de nuevo NTFS y verificar escritura. No se realizan estas pruebas sobre datos del usuario.
+
+
+## Mapa visual y software libre v0.3.0
+
+Bordes de sistemas de archivos con la paleta adaptada de GParted, interior amarillo para usado, blanco para libre y rayado para ocupación desconocida. Selección en naranja, identificadores y tamaños en cada bloque cuando caben; la tabla conserva la información de particiones pequeñas. Las particiones diminutas se ensanchan en pantalla para ser seleccionables; las proporciones visuales son aproximadas y los valores de tabla son los datos leídos.
+
+Dos particiones NTFS comparten color de sistema de archivos, como en GParted. Se distinguen por letra, tamaño, posición y distribución usado/libre. El color no se asigna arbitrariamente por unidad. No se inventa el sistema de archivos de EFI o recuperación: se intenta consultar el volumen asociado aun sin letra y se muestra desconocido si no se obtiene.
+
+WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Crear, mover, copiar y borrar particiones siguen pendientes y no se ofrecen como botones funcionales.

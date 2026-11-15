@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// WinPart contributors, 2026. Distributed without warranty; see COPYING.
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -31,8 +33,9 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.2.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="WinPart · Gestor de particiones · v0.3.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
+        var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
         var title=new Label {Text="WinPart · Particiones y operaciones pendientes",Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(12),ForeColor=Color.FromArgb(40,91,181)};
         Controls.Add(BuildDiskMap());Controls.Add(actions);Controls.Add(title);Controls.Add(status);
@@ -54,6 +57,9 @@ internal sealed partial class MainForm : Form
         {
             var disk=new DiskLayout {Number=0,Name="SSD simulado",Style="GPT",UniqueId="SIMULATED",Complete=true,Size=500UL*1073741824};
             var p=new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,Letter="D",Type="Datos básicos",FileSystem="NTFS",VolumeSize=200UL*1073741824,Free=50UL*1073741824};disk.Partitions.Add(p);
+            disk.Partitions.Add(new PartitionLayout {Number=2,Offset=210UL*1073741824,Size=100UL*1073741824,Letter="E",Type="Datos básicos",FileSystem="exFAT",VolumeSize=100UL*1073741824,Free=70UL*1073741824});
+            if(FileSystemPalette.Get("NTFS")==FileSystemPalette.Get("exFAT")||FileSystemPalette.Used==FileSystemPalette.Unused)throw new Exception("Paleta sin diferenciación");
+            var boxes=new PartitionStrip(disk,disk.Segments()){Width=900,Height=70}.Blocks();if(boxes.Count!=disk.Segments().Count||boxes.Sum(b=>b.Width)!=900)throw new Exception("Mapa de bloques inconsistente");
             form.diskLayouts.Add(disk);form.Show();form.RenderDiskMaps();Application.DoEvents();
             form.ConfigureEditor(disk,p,100UL*1073741824,400UL*1073741824);form.editSize.Value=160*1024;
             form.inlineEditor.Controls.OfType<Button>().Single(b=>b.Text=="Añadir cambio").PerformClick();Application.DoEvents();

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// WinPart contributors, 2026. Distributed without warranty; see COPYING.
 using System;
 using System.Diagnostics;
 using System.Drawing;

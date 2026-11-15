@@ -106,6 +106,7 @@ internal sealed partial class MainForm : Form
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-eliminar-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descartar eliminación modifica datos");
             form.Size=new Size(730,650);form.PerformLayout();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-estrecha.png"),ImageFormat.Png);}
+            form.Size=new Size(1100,800);form.PerformLayout();Application.DoEvents();
             var foreign=new PartitionLayout {Number=7,Offset=400UL*1073741824,Size=32UL*1048576,Type="EFI"};
             if(!CanAdvancedDelete(disk,foreign))throw new Exception("Bloquea EFI ajena al Windows actual en interfaz avanzada");
             form.StageAdvanced(new PendingResize {Advanced=true,Delete=true,Disk=disk,Part=foreign});

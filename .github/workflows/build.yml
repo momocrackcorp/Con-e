@@ -36,11 +36,13 @@ jobs:
         run: |
           Remove-Item output/qa -Recurse -Force
           Copy-Item README.md output/
+          Copy-Item Shared/LICENSE output/Licenses/StorageShared-MIT.txt
+          Copy-Item Shared/README.md output/Licenses/StorageArtwork.txt
           New-Item output/Tools -ItemType Directory -Force
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.14.0-portable
+          name: Con-E-v0.15.0-portable
           path: output/
           if-no-files-found: error
 
@@ -55,6 +57,12 @@ jobs:
           $p = Start-Process partition-output/WinPart.exe -ArgumentList '--smoke-test' -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'WinPart excedió plazo' }
           if ($p.ExitCode -ne 0) { Get-Content partition-output/qa/error.txt -ErrorAction SilentlyContinue; throw 'Falló WinPart' }
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('partition-output/qa/**') != ''
+        with:
+          name: WinPart-interfaz-pruebas
+          path: partition-output/qa/
+          if-no-files-found: error
       - name: Probar reducción y ampliación sobre VHD desechable
         shell: pwsh
         run: |
@@ -89,17 +97,19 @@ jobs:
           Copy-Item WinPart/README.md partition-output/README.md
           Copy-Item WinPart/COPYING partition-output/COPYING
           Copy-Item WinPart/THIRD_PARTY_NOTICES.md partition-output/THIRD_PARTY_NOTICES.md
-          New-Item partition-output/source/src -ItemType Directory -Force
-          Copy-Item WinPart/src/*.cs partition-output/source/src/
-          Copy-Item WinPart/src/*.csproj partition-output/source/src/
-          Copy-Item WinPart/src/app.ico partition-output/source/src/
-          Copy-Item WinPart/build-icon.ps1 partition-output/source/
-          Copy-Item WinPart/README.md partition-output/source/
-          Copy-Item WinPart/COPYING partition-output/source/
-          Copy-Item WinPart/THIRD_PARTY_NOTICES.md partition-output/source/
-          Copy-Item WinPart/upstream partition-output/source/upstream -Recurse
+          New-Item partition-output/source/WinPart/src -ItemType Directory -Force
+          Copy-Item WinPart/src/*.cs partition-output/source/WinPart/src/
+          Copy-Item WinPart/src/*.csproj partition-output/source/WinPart/src/
+          Copy-Item WinPart/src/app.ico partition-output/source/WinPart/src/
+          Copy-Item WinPart/build-icon.ps1 partition-output/source/WinPart/
+          Copy-Item WinPart/README.md partition-output/source/WinPart/
+          Copy-Item WinPart/COPYING partition-output/source/WinPart/
+          Copy-Item WinPart/THIRD_PARTY_NOTICES.md partition-output/source/WinPart/
+          New-Item partition-output/source/Shared -ItemType Directory -Force
+          Copy-Item Shared/* partition-output/source/Shared/
+          Copy-Item WinPart/upstream partition-output/source/WinPart/upstream -Recurse
       - uses: actions/upload-artifact@v4
         with:
-          name: WinPart-v0.8.0-portable
+          name: WinPart-v0.9.0-portable
           path: partition-output/
           if-no-files-found: error

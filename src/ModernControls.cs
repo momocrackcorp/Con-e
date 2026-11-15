@@ -17,7 +17,8 @@ namespace UIModernization
     }
     public class ModernCardPanel : FlowLayoutPanel
     {
-        Color borderColor=ModernTheme.Border;int borderRadius=12;
+        Color borderColor=Color.FromArgb(45,52,63);int borderRadius=12;bool selected;
+        public bool Selected {get{return selected;}set{selected=value;Invalidate();}}
         public Color CardBackColor {get{return BackColor;}set{BackColor=value;Invalidate();}}
         public Color BorderColor {get{return borderColor;}set{borderColor=value;Invalidate();}}
         [DefaultValue(12)] public int BorderRadius {get{return borderRadius;}set{borderRadius=Math.Max(0,value);Invalidate();}}
@@ -25,7 +26,7 @@ namespace UIModernization
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             e.Graphics.Clear(Parent==null?ModernTheme.Canvas:Parent.BackColor);if(Width<2||Height<2)return;e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;
-            using(var path=ModernTheme.Rounded(new RectangleF(.5f,.5f,Width-1,Height-1),BorderRadius*DeviceDpi/96f))using(var fill=new SolidBrush(CardBackColor))using(var pen=new Pen(BorderColor)){e.Graphics.FillPath(fill,path);e.Graphics.DrawPath(pen,path);}
+            using(var path=ModernTheme.Rounded(new RectangleF(1,1,Width-2,Height-2),BorderRadius*DeviceDpi/96f))using(var fill=new SolidBrush(CardBackColor))using(var pen=new Pen(Selected?ModernTheme.Accent:BorderColor,Selected?2:1)){e.Graphics.FillPath(fill,path);e.Graphics.DrawPath(pen,path);}
         }
     }
     public class ModernProgressBar : Control

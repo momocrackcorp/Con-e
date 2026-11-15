@@ -14,3 +14,5 @@ Mirror: https://github.com/GNOME/gparted
 
 Upstream commit inspected: 484ac562bdaddf0e9c54a1f47b5366f0a72b4dc8
 Source: https://github.com/GNOME/gparted/blob/484ac562bdaddf0e9c54a1f47b5366f0a72b4dc8/src/Utils.cc
+
+Miniaturas e inventario de almacenamiento compartidos con Con-E: código propio en source/Shared bajo MIT (texto completo en source/Shared/LICENSE). Atlas gráfico ilustrativo generado y aprobado para el proyecto, sin marcas de fabricantes; original de producción en source/Shared/disk-miniatures.png. No se deduce el formato M.2 a partir de NVMe.

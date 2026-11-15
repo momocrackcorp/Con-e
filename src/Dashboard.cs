@@ -33,7 +33,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.14.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -81,11 +81,12 @@ internal sealed partial class MainForm
     }
     FlowLayoutPanel Card(string glyph, string title)
     {
-        var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=ModernTheme.Border,BorderRadius=12,Width=300,Tag=title };
+        var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=Color.FromArgb(45,52,63),BorderRadius=12,Width=300,Tag=title };
+        WireCard(card,card);
         var header=new FlowLayoutPanel {Name="card-heading",AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,BackColor=ModernTheme.Surface,Margin=new Padding(0,0,0,14)};
         header.Controls.Add(new ComponentPicture {Kind=title=="Almacenamiento"?title+" "+Read("Tipos de almacenamiento"):title,Width=42,Height=42,AccessibleName=title,Margin=new Padding(0,0,8,0)});
         header.Controls.Add(new Label {Text=title,AutoSize=true,Font=new Font(Font.FontFamily,11,FontStyle.Bold),ForeColor=BlueColor,Margin=new Padding(0,10,0,0)});
-        card.Controls.Add(header);cards.Add(card);dashboard.Controls.Add(card);return card;
+        card.Controls.Add(header);card.Selected=selectedCardTitle==title;cards.Add(card);dashboard.Controls.Add(card);return card;
     }
     Label Line(FlowLayoutPanel card, string text, bool prominent = false)
     {
@@ -186,12 +187,7 @@ internal sealed partial class MainForm
             InlineDetails(video, "Ver datos gráficos", "Información gráfica");
             Help(video, "DXGI distingue memoria de video y memoria compartida. En una GPU integrada, una reserva dedicada no demuestra que exista VRAM en chips separados.");
 
-            var disk = Card("▰", "Almacenamiento");
-            if (current == null || current.Volumes.Count == 0) Line(disk, current == null ? "Pendiente de lectura" : "No se pudieron leer las unidades.");
-            else disk.Controls.Add(new StorageSummary(current.Volumes,OpenStorage));
-            Line(disk, Read("Tipos de almacenamiento"));
-            InlineDetails(disk, "Ver discos físicos", "Disco físico", "Particiones");
-            Help(disk, "El anillo muestra espacio ocupado y libre. Ver uso y analizar carpetas abre distribución, actividad de lectura/escritura y telemetría disponible. Cada unidad puede ser una partición del mismo disco.");
+            var diskCards=RenderPhysicalDiskCards();
 
             var network = Card("", "Tarjeta de red");
             Line(network, Read("Adaptadores de red"), true);
@@ -214,9 +210,10 @@ internal sealed partial class MainForm
 
             // A–H: equipo queda al final del resumen, detrás de las ocho categorías.
             dashboard.Controls.SetChildIndex(cpu, 0); dashboard.Controls.SetChildIndex(ram, 1);
-            dashboard.Controls.SetChildIndex(video, 2); dashboard.Controls.SetChildIndex(disk, 3);
-            dashboard.Controls.SetChildIndex(network, 4); dashboard.Controls.SetChildIndex(bios, 5);
-            dashboard.Controls.SetChildIndex(windows, 6); dashboard.Controls.SetChildIndex(account, 7);
+            dashboard.Controls.SetChildIndex(video, 2);
+            for(int i=0;i<diskCards.Count;i++)dashboard.Controls.SetChildIndex(diskCards[i],3+i);
+            dashboard.Controls.SetChildIndex(network,3+diskCards.Count); dashboard.Controls.SetChildIndex(bios,4+diskCards.Count);
+            dashboard.Controls.SetChildIndex(windows,5+diskCards.Count); dashboard.Controls.SetChildIndex(account,6+diskCards.Count);
 
             var driver = Card("⚒", "Controladores");
             var driverText = current == null ? "Pendiente de lectura" : !current.PnpReadComplete ? "Lectura PnP incompleta" : current.ProblemDevices.Count == 0 ? "Sin error PnP informado" : current.ProblemDevices.Count + " dispositivo(s) por revisar";
@@ -289,6 +286,7 @@ internal sealed partial class MainForm
             form.current.CoreThreads.AddRange(new[]{2,2,2,2,2,2,2,2,1,1,1,1});
             var topology=CpuTopology.Read();if(topology.Count==0||topology.Sum()==0)throw new InvalidOperationException("No se obtuvo topología real de CPU");
             form.current.Volumes.Add(new VolumeInfo { Name = "C:",FileSystem="NTFS",Label="SISTEMA", TotalGiB = 500, FreeGiB = 320 });
+            form.current.PhysicalDisks.AddRange(StorageFixtures());
             form.current.ProblemDevices.Add("audio");
             var unknown = new HardwareItem { Name = "Dispositivo PCI sin identificar (prueba)", Category = "Otros dispositivos", DeviceId = @"PCI\VEN_1234&DEV_5678\INSTANCIA", SearchId = @"PCI\VEN_1234&DEV_5678&SUBSYS_11112222&REV_01", ErrorCode = 28 };
             ParseIdentifiers(unknown);

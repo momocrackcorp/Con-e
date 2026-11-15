@@ -27,7 +27,7 @@ internal sealed partial class MainForm
     }
     void SelectDisk(DiskLayout disk)
     {
-        selectedEditDisk=disk;selectedEditPartition=null;createPartition.Enabled=false;resizePartition.Enabled=false;formatButton.Enabled=false;deletePartition.Enabled=false;advancedButton.Enabled=CanAdvancedDisk(disk);
+        selectedEditDisk=disk;selectedEditPartition=null;UpdateDiskCardBorders();createPartition.Enabled=false;resizePartition.Enabled=false;formatButton.Enabled=false;deletePartition.Enabled=false;advancedButton.Enabled=CanAdvancedDisk(disk);
         partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+Environment.NewLine+"Selecciona un intervalo para crear o editar una partición, o usa Avanzadas para preparar el disco completo. Vaciar disco elimina TODAS sus particiones.";
     }
     void StageReset(string style)

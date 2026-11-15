@@ -11,6 +11,7 @@ internal sealed class StorageGroup {public string Name;public long Bytes;}
 internal sealed class StorageScan
 {
     public readonly List<StorageGroup> Groups=new List<StorageGroup>();
+    public DateTime Captured=DateTime.Now;
     public long Files,Directories,Skipped,LinksSkipped;public TimeSpan Elapsed;public long Total,Free;
 }
 internal sealed class StorageScanProgress {public long Files,Skipped;public string Group="";}

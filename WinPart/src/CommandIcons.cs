@@ -39,7 +39,7 @@ internal static class CommandIcons
         return bitmap;
     }
     public static string DiskKind(DiskLayout disk)
-    {return disk.BusType==15?"VHD / imagen virtual":disk.BusType==14?"Disco virtual":disk.BusType==7?"Disco USB":disk.BusType==0?"Disco · tipo no informado":"Disco físico";}
+    {return disk.BusType==15?"VHD / imagen virtual":disk.BusType==14?"Disco virtual":disk.Info!=null?disk.Info.Kind+" · "+disk.Info.Bus+" · "+disk.Info.Form:disk.BusType==7?"Disco USB":disk.BusType==0?"Disco · tipo no informado":"Disco físico";}
     public static string Role(DiskLayout disk,PartitionLayout p)
     {
         if(p.Gap)return "Sin asignar";

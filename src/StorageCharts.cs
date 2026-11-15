@@ -27,24 +27,32 @@ internal sealed class StorageRing : Control
     }
 }
 internal sealed class StorageSlice {internal string Name;internal long Bytes;internal Color Color;}
-internal sealed class FolderChart : Control
+internal sealed class FolderChart : UserControl
 {
     internal List<StorageSlice> Slices=new List<StorageSlice>();
-    internal FolderChart(){Height=300;Width=700;SetStyle(ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint|ControlStyles.ResizeRedraw,true);Resize+=(s,e)=>FitHeight();}
-    internal void SetSlices(List<StorageSlice> slices){Slices=slices;AccessibleName=string.Join("; ",Slices.Select(s=>s.Name+": "+StorageFormat.Size(s.Bytes)));FitHeight();Invalidate();}
-    void FitHeight(){int needed=Slices.Count==0?70:58+Slices.Count*30;if(Height!=needed)Height=needed;}
-    protected override void OnPaint(PaintEventArgs e)
+    readonly SliceBar bar=new SliceBar {Dock=DockStyle.Top,Height=23};
+    readonly ListView list=new ListView {Dock=DockStyle.Fill,View=View.Details,FullRowSelect=true,HideSelection=false,MultiSelect=false,BorderStyle=BorderStyle.None,HeaderStyle=ColumnHeaderStyle.Nonclickable};
+    readonly Label selection=new Label {Dock=DockStyle.Bottom,Height=42,ForeColor=ModernTheme.Muted,AutoEllipsis=true,UseMnemonic=false,Padding=new Padding(3,6,0,0)};
+    ImageList swatches;readonly List<Bitmap> swatchImages=new List<Bitmap>();
+    internal FolderChart()
     {
-        base.OnPaint(e);
-        if(Slices.Count==0){TextRenderer.DrawText(e.Graphics,"Analiza carpetas para desglosar el espacio utilizado.",Font,ClientRectangle,ModernTheme.Muted,TextFormatFlags.WordBreak|TextFormatFlags.VerticalCenter);return;}
-        double total=Slices.Sum(s=>(double)s.Bytes);if(total<=0)return;
-        float x=2;int width=Math.Max(1,Width-4);
-        foreach(var slice in Slices){float part=(float)(slice.Bytes/total*width);using(var b=new SolidBrush(slice.Color))e.Graphics.FillRectangle(b,x,4,part,20);x+=part;}
-        for(int i=0;i<Slices.Count;i++){
-            var s=Slices[i];int y=38+i*30;using(var b=new SolidBrush(s.Color))e.Graphics.FillRectangle(b,4,y+6,11,11);
-            TextRenderer.DrawText(e.Graphics,s.Name,Font,new Rectangle(24,y,Math.Max(70,Width-205),28),ModernTheme.Text,TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPrefix);
-            TextRenderer.DrawText(e.Graphics,StorageFormat.Size(s.Bytes)+" · "+(s.Bytes/total*100).ToString("0.0")+" %",Font,new Rectangle(Math.Max(100,Width-175),y,170,28),ModernTheme.Muted,TextFormatFlags.Right|TextFormatFlags.VerticalCenter);
-        }
+        Height=235;Width=440;BackColor=ModernTheme.Surface;list.BackColor=ModernTheme.Surface;list.ForeColor=ModernTheme.Text;list.ShowItemToolTips=true;list.Columns.Add("Carpeta / grupo",200);list.Columns.Add("Tamaño",110);list.Columns.Add("%",65);
+        Controls.Add(list);Controls.Add(selection);Controls.Add(bar);Resize+=(s,e)=>{int w=Math.Max(200,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(100,w-160);list.Columns[1].Width=100;list.Columns[2].Width=60;};
+        list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;int index=list.SelectedItems[0].Index;bar.Selected=index;bar.Invalidate();var item=Slices[index];double total=Slices.Sum(v=>(double)v.Bytes);selection.Text=item.Name+" · "+StorageFormat.Size(item.Bytes)+" · "+(total>0?item.Bytes/total*100:0).ToString("0.0")+" %";};
+        bar.Picked+=i=>{if(i>=0&&i<list.Items.Count){list.Items[i].Selected=true;list.Items[i].EnsureVisible();}};Disposed+=(s,e)=>{swatches?.Dispose();foreach(var b in swatchImages)b.Dispose();};
+    }
+    internal void SetSlices(List<StorageSlice> slices)
+    {
+        Slices=slices;bar.Slices=slices;bar.Selected=-1;bar.Invalidate();AccessibleName=string.Join("; ",slices.Select(s=>s.Name+": "+StorageFormat.Size(s.Bytes)));list.BeginUpdate();
+        try{list.Items.Clear();list.SmallImageList=null;swatches?.Dispose();foreach(var image in swatchImages)image.Dispose();swatchImages.Clear();swatches=new ImageList {ImageSize=new Size(12,12),ColorDepth=ColorDepth.Depth32Bit};list.SmallImageList=swatches;double total=slices.Sum(s=>(double)s.Bytes);int i=0;foreach(var slice in slices){var image=new Bitmap(12,12);using(var g=Graphics.FromImage(image))g.Clear(slice.Color);swatchImages.Add(image);swatches.Images.Add(image);list.Items.Add(new ListViewItem(new[]{slice.Name,StorageFormat.Size(slice.Bytes),(total>0?slice.Bytes/total*100:0).ToString("0.0")+" %"},i++){ToolTipText=slice.Name});}}
+        finally{list.EndUpdate();}selection.Text=slices.Count==0?"Sin analizar · sólo se mostrarán carpetas de la raíz.":"Selecciona un color o una carpeta para ver su tamaño.";Height=slices.Count==0?78:Math.Min(310,92+Math.Max(3,slices.Count)*25);
+    }
+    sealed class SliceBar : Control
+    {
+        internal List<StorageSlice> Slices=new List<StorageSlice>();internal int Selected=-1;internal event Action<int> Picked;
+        internal SliceBar(){SetStyle(ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint|ControlStyles.ResizeRedraw,true);}
+        protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);double total=Slices.Sum(s=>(double)s.Bytes);if(total<=0){using(var b=new SolidBrush(ModernTheme.Track))e.Graphics.FillRectangle(b,ClientRectangle);return;}float x=0;for(int i=0;i<Slices.Count;i++){float width=(float)(Slices[i].Bytes/total*Width);using(var b=new SolidBrush(i==Selected?ControlPaint.Dark(Slices[i].Color):Slices[i].Color))e.Graphics.FillRectangle(b,x,1,width,Height-3);x+=width;}}
+        protected override void OnMouseDown(MouseEventArgs e){base.OnMouseDown(e);double total=Slices.Sum(s=>(double)s.Bytes),x=0;for(int i=0;i<Slices.Count;i++){x+=total>0?Slices[i].Bytes/total*Width:0;if(e.X<x){Picked?.Invoke(i);return;}}}
     }
 }
 internal sealed class CapacityBar : Control

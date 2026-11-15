@@ -35,7 +35,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.5.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="WinPart · Gestor de particiones · v0.6.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -83,6 +83,13 @@ internal sealed partial class MainForm : Form
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"vhd-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||File.Exists(virtualPath))throw new Exception("El descarte virtual modifica disco");
             bool virtualRejected=false;try{DecodeOperations(EncodeOperations(new[]{new PendingResize {VirtualAction="create",VirtualPath=virtualPath,Bytes=1}}));}catch{virtualRejected=true;}if(!virtualRejected)throw new Exception("Acepta tamaño VHD inválido");
+            var gap=disk.Segments().First(g=>CanCreate(disk,g));
+            form.SelectPartition(disk,gap);if(!form.createPartition.Enabled)throw new Exception("No habilita Nueva partición en espacio libre");
+            form.StageCreate(NewPartitionChange(disk,gap,128UL*1048576,"exFAT","PRUEBA"));
+            var newPlan=DecodeOperations(EncodeOperations(form.pendingResizes));
+            if(newPlan.Count!=1||!newPlan[0].Create||newPlan[0].FileSystem!="exFAT"||disk.Partitions.Count!=2)throw new Exception("Preparación de nueva partición incorrecta");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"nueva-particion-pendiente.png"),ImageFormat.Png);}
+            form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descarte de nueva partición modifica datos");
             var real=ReadDiskLayouts(new Snapshot());if(!real.Any(d=>d.Partitions.Count>0))throw new Exception("La consulta real no obtuvo particiones");
             File.WriteAllText(Path.Combine(dir,"resultado.txt"),"OK: aplicación independiente, cola visual, descarte y lectura real.");form.Close();
         }

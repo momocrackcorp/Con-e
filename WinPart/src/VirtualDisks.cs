@@ -142,11 +142,12 @@ internal sealed partial class MainForm
             string drive=RunStorageScript(VirtualDiskLookup(path)+"$parts=@($disk | Get-Partition | Where-Object DriveLetter); if($parts.Count -ne 1){throw 'Falta partición de prueba'}; $vol=$parts[0] | Get-Volume; if($vol.FileSystem -ne 'NTFS' -or $vol.FileSystemLabel -ne 'WINPART_TEST'){throw 'Formato de prueba incorrecto'}; if($parts[0].Size -ne 268435456){throw 'Tamaño de partición incorrecto'}; [Console]::Write($parts[0].DriveLetter);").Trim();
             if(drive.Length!=1)throw new Exception("Letra de VHD no válida");
             string file=drive+@":\winpart-virtual-sentinel.txt";File.WriteAllText(file,"Prueba VHD de WinPart");
+            CreatePartitionIntegrationTest(path,file);
             bool overwriteRejected=false;try{ValidateVirtual(plan[0]);}catch{overwriteRejected=true;}if(!overwriteRejected)throw new Exception("Permite sobrescribir VHD");
             ExecuteOperations(DecodeOperations(EncodeOperations(new[]{new PendingResize {VirtualAction="detach",VirtualPath=path}})));
             if(!File.Exists(path)||Directory.Exists(drive+@":\"))throw new Exception("Desconexión VHD incorrecta");
             ExecuteOperations(DecodeOperations(EncodeOperations(new[]{new PendingResize {VirtualAction="attach",VirtualPath=path}})));
-            string newDrive=RunStorageScript(VirtualDiskLookup(path)+"[Console]::Write(($disk | Get-Partition | Where-Object DriveLetter | Select-Object -First 1).DriveLetter);").Trim();
+            string newDrive=RunStorageScript(VirtualDiskLookup(path)+"[Console]::Write(($disk | Get-Partition | Where-Object { $_.DriveLetter -and ($_.Size -eq 268435456) } | Select-Object -First 1).DriveLetter);").Trim();
             if(File.ReadAllText(newDrive+@":\winpart-virtual-sentinel.txt")!="Prueba VHD de WinPart")throw new Exception("Se perdieron datos al reconectar");
             ExecuteOperations(new[]{new PendingResize {VirtualAction="detach",VirtualPath=path}});
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","virtual-ok.txt"),"OK: plan sin escritura; creación VHD dinámico 512 MiB; partición GPT NTFS 256 MiB; rechazo de sobrescritura; desconexión conserva archivo; reconexión conserva contenido.");

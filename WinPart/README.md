@@ -1,4 +1,4 @@
-# WinPart v0.5.0 (nombre provisional)
+# WinPart v0.6.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -8,20 +8,20 @@ Mapa visual de discos, lista de particiones y ficha; editor de tamaño por arras
 
 ## Pendiente para un gestor completo
 
-Crear, eliminar, formatear, mover, copiar particiones y más sistemas de archivos. No es un port completo de GParted: adapta la paleta de Utils::get_color; no incorpora el motor libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
+Eliminar, mover, copiar particiones y más sistemas de archivos. No es un port completo de GParted: adapta la paleta de Utils::get_color; no incorpora el motor libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
 
 ## Compilar
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.5.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.6.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
 ## Sistemas de archivos v0.4.0
 
 Columnas Partición, Sistema de archivos, Montaje, Etiqueta, Tamaño, Usado, Libre e Indicadores. Windows proporciona tamaños de volúmenes con letra; las particiones sin volumen consultable muestran datos desconocidos.
 
-Sistema de archivos abre un selector de formatos compatibles informados por MSFT_Volume.GetSupportedFileSystems, limitado por ahora a NTFS, exFAT y FAT32. No hay ext4/btrfs. Añadir formateo sólo prepara una operación y muestra la transición pendiente. Aplicar muestra un resumen que advierte que FORMATEAR BORRA TODOS LOS ARCHIVOS de cada volumen indicado. No es una conversión conservando datos. Descartar no modifica el disco.
+Sistema de archivos propone NTFS, exFAT y FAT32. La enumeración GetSupportedFileSystems no se usa como lista exhaustiva: algunos proveedores omiten exFAT. La compatibilidad real, el tamaño y la identidad se comprueban al aplicar. No hay ext4/btrfs. Añadir formateo sólo prepara una operación y muestra la transición pendiente. Aplicar muestra un resumen que advierte que FORMATEAR BORRA TODOS LOS ARCHIVOS de cada volumen indicado. No es una conversión conservando datos. Descartar no modifica el disco.
 
 La edición de formato está limitada a volúmenes con letra sobre GPT de datos básicos identificados inequívocamente. Bloquea particiones de sistema/arranque, la unidad de Windows, la unidad donde reside WinPart y volúmenes con paginación activa. Revalida identidad de disco/partición, offset/tamaño, letra, identidad del volumen y compatibilidad antes de escribir. No fuerza desmontaje: Windows puede rechazar un volumen en uso. No pretende reemplazar todas las capacidades de GParted.
 
@@ -36,7 +36,7 @@ Bordes de sistemas de archivos con la paleta adaptada de GParted, interior amari
 
 Dos particiones NTFS comparten color de sistema de archivos, como en GParted. Se distinguen por letra, tamaño, posición y distribución usado/libre. El color no se asigna arbitrariamente por unidad. No se inventa el sistema de archivos de EFI o recuperación: se intenta consultar el volumen asociado aun sin letra y se muestra desconocido si no se obtiene.
 
-WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Crear, mover, copiar y borrar particiones siguen pendientes y no se ofrecen como botones funcionales.
+WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Mover, copiar y borrar particiones siguen pendientes. Nueva partición permite crear en intervalos sin asignar de discos GPT.
 
 
 ## Elevación al aplicar v0.4.0
@@ -57,4 +57,15 @@ La creación prepara GPT, una partición NTFS `WINPART_TEST` que ocupa la mitad 
 
 Backend: API nativa `virtdisk.dll` para crear/conectar/desconectar y cmdlets Storage de Windows PowerShell para preparar GPT/NTFS. No requiere Hyper-V ni módulos de pago. Las pruebas de GitHub crean su propio VHD desechable, verifican escritura, desconexión/reconexión y conservación del archivo. El VHD conectado aparece en el mapa al actualizarse después de aplicar.
 
-Esta versión permite probar las operaciones ya disponibles de tamaño y formato; crear/borrar particiones arbitrarias, copiar y mover siguen siendo pasos siguientes del proyecto.
+Esta versión permite probar las operaciones ya disponibles de tamaño y formato; borrar, copiar y mover particiones siguen siendo pasos siguientes del proyecto.
+
+
+## Nueva partición v0.6.0
+
+Selecciona un bloque o fila **Sin asignar** y pulsa **Nueva partición…**. Elige tamaño en MiB, sistema de archivos (NTFS, exFAT, FAT32 o Sin formatear/RAW) y etiqueta opcional. Windows asigna una letra disponible. **Añadir a pendientes** sólo prepara la operación; **Aplicar** muestra el resumen y solicita UAC cuando es necesario, sin reiniciar la ventana. Descartar no escribe nada.
+
+Sólo se admite GPT leído íntegramente, con identidad inequívoca. Se alinean los comienzos a 1 MiB y se reservan los extremos para metadatos. Se rechazan los huecos diminutos, tamaños fuera del intervalo, operaciones superpuestas y cambios de identidad o de espacio libre. La nueva partición no borra las existentes. Si se crea pero falla el formato, se conserva y se informa del resultado parcial para revisarlo en el mapa; no se elimina silenciosamente.
+
+FAT32 está limitado por este motor a 32 MiB–32 GiB; el mínimo general de creación es 16 MiB. RAW significa partición creada sin sistema de archivos. ext4, btrfs y swap no se ofrecen como operaciones disponibles: falta implementar sus motores. ReFS tampoco está implementado.
+
+Las pruebas sobre VHD desechable crean NTFS, FAT32, exFAT y RAW, comprueban el offset, tamaño, etiqueta/letra, escritura en los formatos disponibles, conservación del contenido existente y rechazo de una instantánea obsoleta.

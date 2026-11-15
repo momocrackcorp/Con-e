@@ -52,7 +52,7 @@ internal sealed partial class MainForm
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        operationToolbar=toolbar;toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
+        operationToolbar=toolbar;toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(BuildCreateButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
         var legend=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(8,3,3,3)};
         foreach(string fs in new[]{"NTFS","FAT32","EXFAT","UNALLOCATED"})legend.Controls.Add(new Label {Text=fs=="UNALLOCATED"?"Sin asignar":fs,AutoSize=true,BackColor=FileSystemPalette.Get(fs),ForeColor=fs=="EXFAT"?Color.White:Color.Black,Padding=new Padding(4)});
         legend.Controls.Add(new Label {Text="Interior amarillo: usado · blanco: libre · rayado: no disponible",AutoSize=true,Margin=new Padding(6)});toolbar.Controls.Add(legend);
@@ -71,14 +71,14 @@ internal sealed partial class MainForm
     static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
     {
-        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);formatButton.Enabled=CanFormat(disk,p);
+        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);formatButton.Enabled=CanFormat(disk,p);createPartition.Enabled=CanCreate(disk,p);
         partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+Environment.NewLine+
             "Tamaño del bloque: "+Space(p.Size)+" · Offset: "+p.Offset.ToString(CultureInfo.InvariantCulture)+" bytes"+Environment.NewLine+
-            (p.Gap ? "Intervalo sin partición en el mapa leído; puede incluir espacios de alineación o metadatos." :
+            (p.Gap ? (CanCreate(disk,p)?"Espacio sin asignar. Pulsa Nueva partición para elegir tamaño, etiqueta y sistema de archivos.":"Intervalo demasiado pequeño o reservado para alineación/metadatos; no se puede usar para crear una partición.") :
             "Sistema de archivos: "+p.FileSystem+" · Etiqueta: "+p.Label+Environment.NewLine+
             "Tamaño del volumen: "+(p.VolumeSize.HasValue?Space(p.VolumeSize.Value):"No disponible")+" · Libre: "+(p.Free.HasValue?Space(p.Free.Value):"No disponible")+
             (p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free.Value<=p.VolumeSize.Value?" · Ocupado: "+Space(p.VolumeSize.Value-p.Free.Value):""))+
-            Environment.NewLine+(CanResize(disk,p)?"Usa Reducir / ampliar partición para modificar su tamaño.":"Esta selección no admite modificación de tamaño en Con-E.");
+            Environment.NewLine+(CanResize(disk,p)?"Usa Reducir / ampliar partición para modificar su tamaño.":"Los cambios se preparan en la cola; sólo se ejecutan al aplicar.");
     }
     void RenderDiskMaps()
     {
@@ -86,7 +86,7 @@ internal sealed partial class MainForm
         try
         {
             foreach(Control old in diskMaps.Controls.Cast<Control>().ToArray())old.Dispose();
-            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;formatButton.Enabled=false;
+            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;formatButton.Enabled=false;createPartition.Enabled=false;
             partitionInfo.Height=Math.Max(140,TextRenderer.MeasureText("Ag",Font).Height*6+12);
             partitionInfo.Text="Selecciona un bloque del mapa o una fila para ver sus datos. Las particiones pequeñas se seleccionan también en la lista.";
             if(diskLayouts.Count==0) { diskMaps.Controls.Add(new Label { Text="No se pudo obtener el mapa físico de discos. Revisa las incidencias de lectura.", AutoSize=true, MaximumSize=new Size(500,0) });return; }
@@ -105,7 +105,7 @@ internal sealed partial class MainForm
                 int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
-                    var queued=pendingResizes.FirstOrDefault(q=>!q.IsVirtual&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
+                    var queued=pendingResizes.FirstOrDefault(q=>!q.IsVirtual&&!q.Create&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
                     string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
                     var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+p.FileSystem};var swatch=new Bitmap(16,16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,1,1,14,14);swatchSources.Add(swatch);swatches.Images.Add(swatch);
                     item.ImageIndex=swatches.Images.Count-1;list.Items.Add(item);

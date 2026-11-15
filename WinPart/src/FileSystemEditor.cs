@@ -34,7 +34,7 @@ internal sealed partial class MainForm
                 var options=await System.Threading.Tasks.Task.Run(()=>FormatOptions(disk,part));if(IsDisposed)return;
                 formatDisk=disk;formatPart=part;formatVolumeId=options.Item1;formatChoice.Items.Clear();formatChoice.Items.AddRange(options.Item2.Cast<object>().ToArray());
                 if(formatChoice.Items.Count==0)throw new InvalidOperationException("Windows no informa formatos compatibles admitidos por WinPart.");
-                formatChoice.SelectedIndex=0;formatWarning.Text="FORMATEAR · disco "+disk.Number+" · "+part.Letter+": · actual "+part.FileSystem+Environment.NewLine+"Borrará TODOS los archivos de este volumen al pulsar Aplicar y confirmar.";
+                formatChoice.SelectedIndex=0;formatWarning.Text="FORMATEAR · disco "+disk.Number+" · "+part.Letter+": · actual "+part.FileSystem+Environment.NewLine+"Borrará TODOS los archivos al aplicar y confirmar. Opciones Windows; compatibilidad y tamaño se validan al aplicar. ext4 / swap: no implementados.";
                 foreach(Control control in inlineEditor.Controls)control.Visible=ReferenceEquals(control,pendingList);inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;
             }
             catch(Exception ex)
@@ -70,17 +70,18 @@ internal sealed partial class MainForm
         {
             if(Convert.ToUInt32(result["ReturnValue"])!=0)throw new InvalidOperationException("Windows no pudo consultar formatos compatibles.");
             var formats=(string[])result["SupportedFileSystems"];
-            return Tuple.Create(Value(volume,"UniqueId"),formats.Where(f=>new[]{"NTFS","exFAT","FAT32"}.Contains(f,StringComparer.OrdinalIgnoreCase)).ToArray());
+            return Tuple.Create(Value(volume,"UniqueId"),formats.Where(f=>new[]{"NTFS","exFAT","FAT32"}.Contains(f,StringComparer.OrdinalIgnoreCase)).Concat(new[]{"NTFS","exFAT","FAT32"}).Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
         }}
     }
     void StageFormat(DiskLayout disk,PartitionLayout part,string fs,string volumeId)
     {
-        pendingResizes.RemoveAll(p=>!p.IsVirtual&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        pendingResizes.RemoveAll(p=>!p.IsVirtual&&!p.Create&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
         pendingResizes.Add(new PendingResize {Disk=disk,Part=part,FileSystem=fs,VolumeId=volumeId});UpdatePending();RenderDiskMaps();
         inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;
     }
     static void ValidateFormat(PendingResize change)
     {
+        ValidateFileSystemSize(change.FileSystem,change.Part.Size);
         var options=FormatOptions(change.Disk,change.Part);
         if(change.VolumeId=="")change.VolumeId=options.Item1;
         if(options.Item1!=change.VolumeId||!options.Item2.Contains(change.FileSystem,StringComparer.OrdinalIgnoreCase))throw new InvalidOperationException("El volumen o sus formatos compatibles cambiaron. Prepara de nuevo la operación.");

@@ -81,13 +81,21 @@ internal sealed partial class MainForm
         foreach(var p in before.Summary.Where(p=>p[0]!="Memoria RAM instalada"&&p[0]!="Memoria instalada en módulos"&&p[0]!="Ranuras RAM"&&p[0]!="Procesador"&&p[0]!="Núcleos / procesadores lógicos"))test.Summary.Add(p);
         test.Summary.Add(new[]{"Memoria RAM instalada","32 GiB"});test.Summary.Add(new[]{"Ranuras RAM","4 posiciones informadas · 4 módulos detectados"});test.Summary.Add(new[]{"Procesador","Intel Core i7-4770K · ejemplo"});test.Summary.Add(new[]{"Núcleos / procesadores lógicos","4 / 8"});test.CoreThreads.AddRange(new[]{2,2,2,2});
         foreach(string name in new[]{"DIMM_A1","DIMM_A2","DIMM_B1","DIMM_B2"}){var m=new HardwareItem {Name=name,Category="Memoria RAM"};m.Properties["Capacidad (bytes)"]="8589934592";m.Properties["Tipo SMBIOS (código)"]="24";m.Properties["Velocidad configurada (MHz)"]="1600";m.Properties["Fabricante"]="Ejemplo";m.Properties["Serie"]="SERIE-PRUEBA";test.RamSlots.Add(new RamSlot {Name=name,State="Ocupada · módulo detectado",Module=m});}
-        form.current=test;form.Size=new Size(1800,900);form.tabs.SelectedIndex=0;form.RenderDashboard();form.ResizeCards();Application.DoEvents();
+        form.current=test;form.Width=1100;form.tabs.SelectedIndex=0;form.RenderDashboard();form.ResizeCards();Application.DoEvents();
         var card=form.cards.First(c=>Convert.ToString(c.Tag)=="Memoria RAM");var grid=card.Controls.OfType<CompactRamGrid>().Single();var tiles=grid.Controls.OfType<CompactRamTile>().ToArray();
-        if(tiles.Length!=4||tiles[0].Top!=tiles[1].Top||tiles[2].Top<=tiles[0].Top||grid.Height>280*form.DeviceDpi/96f)throw new Exception("RAM no compacta o sin distribución de dos columnas");
-        int collapsed=tiles[0].Height;tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height<=collapsed)throw new Exception("No expande detalle de módulo RAM");tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height!=collapsed)throw new Exception("No contrae detalle de módulo RAM");
-        using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-ancha.png"));}
-        form.Width=1100;form.ResizeCards();Application.DoEvents();if(tiles[0].Top==tiles[1].Top)throw new Exception("RAM no se adapta a una columna en tarjetas estrechas");
-        using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-estrecha.png"));}
+        // Exercise the same production card at a fixed logical width, independent of runner screen limits.
+        using(var preview=new Form {Text="Memoria RAM compacta · datos simulados",ClientSize=new Size(630,650),AutoScroll=true,BackColor=ModernTheme.Canvas,Font=form.Font})
+        {
+            form.dashboard.Controls.Remove(card);preview.Controls.Add(card);card.Location=new Point(12,12);var modern=card as ModernCardPanel;if(modern!=null)modern.Selected=true;
+            Action<int> fit=width=>{card.MinimumSize=card.MaximumSize=new Size(width,0);card.Width=width;int inner=width-card.Padding.Horizontal;foreach(Control child in card.Controls){if(child is Label)child.MaximumSize=new Size(inner,0);else if(child is FlowLayoutPanel){child.MinimumSize=child.MaximumSize=new Size(inner,0);}}preview.PerformLayout();card.PerformLayout();Application.DoEvents();};
+            preview.Show();fit(600);
+            using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-distribucion.png"));}
+            if(tiles.Length!=4||tiles[0].Top!=tiles[1].Top||tiles[2].Top<=tiles[0].Top||grid.Height>280*form.DeviceDpi/96f)throw new Exception("RAM no compacta: grid="+grid.Size+", tiles="+string.Join(";",tiles.Select(t=>t.Bounds.ToString())));
+            int collapsed=tiles[0].Height;tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height<=collapsed)throw new Exception("No expande detalle de módulo RAM");tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height!=collapsed)throw new Exception("No contrae detalle de módulo RAM");
+            using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-ancha.png"));}
+            fit(290);preview.ClientSize=new Size(320,650);Application.DoEvents();if(tiles[0].Top==tiles[1].Top)throw new Exception("RAM no se adapta a una columna en tarjetas estrechas");
+            using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-estrecha.png"));}preview.Close();
+        }
         System.IO.File.WriteAllText(System.IO.Path.Combine(dir,"ram-hdd.txt"),"OK: cuatro módulos RAM en filas compactas, dos/una columna, detalle expandible y plegable. HDD WD10EARX/WD10EAVS detrás de RAID reconocidos por catálogo; RPM, descriptor válido/inválido, SSD y VHD sin reclasificar indebidamente.");
         form.current=before;form.Size=originalSize;form.RenderDashboard();
     }

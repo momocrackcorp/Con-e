@@ -82,6 +82,7 @@ internal sealed partial class MainForm
     }
     void RenderDiskMaps()
     {
+        var previousDisk=selectedEditDisk;var previousPart=selectedEditPartition;
         diskMaps.SuspendLayout();
         try
         {
@@ -122,7 +123,14 @@ internal sealed partial class MainForm
                 list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(220,(int)(width*0.22));};
                 group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(180,group.Width-80),0);
                 group.Controls.Add(headingRow,0,0);group.Controls.Add(map,0,1);group.Controls.Add(list,0,2);diskMaps.Controls.Add(group);
-                if(list.Items.Count>0){var first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
+                if(list.Items.Count>0)
+                {
+                    ListViewItem first=null;
+                    if(previousDisk!=null&&previousPart!=null&&disk.Number==previousDisk.Number&&disk.UniqueId==previousDisk.UniqueId)
+                        first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>{var p=(PartitionLayout)r.Tag;return p.Gap==previousPart.Gap&&p.Offset==previousPart.Offset&&p.Size==previousPart.Size&&(p.Gap||p.Number==previousPart.Number);});
+                    else if(previousPart==null&&selectedEditPartition==null)first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];
+                    if(first!=null){first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
+                }
             }
         }
         finally{diskMaps.ResumeLayout(true);FitDiskGroups();}

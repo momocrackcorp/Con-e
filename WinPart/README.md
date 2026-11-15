@@ -1,4 +1,4 @@
-# WinPart v0.4.0 (nombre provisional)
+# WinPart v0.5.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -14,7 +14,7 @@ Crear, eliminar, formatear, mover, copiar particiones y más sistemas de archivo
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.4.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.5.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
 ## Sistemas de archivos v0.4.0
@@ -48,3 +48,13 @@ El auxiliar admite únicamente operaciones conocidas de tamaño/formato. Recibe 
 Cuando el usuario sin elevar no puede consultar límites exactos o formatos compatibles, puede preparar una propuesta claramente indicada como pendiente de comprobación. El auxiliar la valida antes de la primera modificación y la rechaza si Windows no la admite. Los límites propuestos no implican que una ampliación sea posible a través de otras particiones.
 
 Las pruebas comprueban serialización del destino y ejecutan el proceso auxiliar real sobre un VHD desechable. La prueba automática hereda un token ya elevado del runner; no simula la interacción humana con el cuadro UAC en una sesión estándar. Crear, mover, copiar y borrar siguen pendientes.
+
+## Disco virtual de prueba v0.5.0
+
+El menú **Disco virtual de prueba** permite crear un VHD dinámico nuevo (256–65536 MiB), conectar un VHD existente y desconectarlo conservando el archivo. Cada acción se prepara en la cola y sólo se ejecuta después de confirmar **Aplicar**. El auxiliar elevado se inicia en ese momento; la ventana principal permanece abierta.
+
+La creación prepara GPT, una partición NTFS `WINPART_TEST` que ocupa la mitad de la capacidad virtual y espacio sin asignar para pruebas. El archivo consume espacio real conforme se escriben datos; no modifica las particiones del disco que lo aloja. No se sobrescriben VHD existentes. Guarda el archivo en un disco local con espacio suficiente. Al reconectar se conservan sus particiones y contenido. La desconexión se aplica por separado de cambios de particiones y bloquea discos usados por Windows, paginación o la propia aplicación.
+
+Backend: API nativa `virtdisk.dll` para crear/conectar/desconectar y cmdlets Storage de Windows PowerShell para preparar GPT/NTFS. No requiere Hyper-V ni módulos de pago. Las pruebas de GitHub crean su propio VHD desechable, verifican escritura, desconexión/reconexión y conservación del archivo. El VHD conectado aparece en el mapa al actualizarse después de aplicar.
+
+Esta versión permite probar las operaciones ya disponibles de tamaño y formato; crear/borrar particiones arbitrarias, copiar y mover siguen siendo pasos siguientes del proyecto.

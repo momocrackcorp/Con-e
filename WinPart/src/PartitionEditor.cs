@@ -60,6 +60,7 @@ internal sealed partial class MainForm
     }
     internal static void ResizeIntegrationTest()
     {
+        VirtualDiskIntegrationTest();
         string id=Environment.GetEnvironmentVariable("CONE_TEST_DISK_ID");uint number;
         if(string.IsNullOrWhiteSpace(id)||!uint.TryParse(Environment.GetEnvironmentVariable("CONE_TEST_DISK_NUMBER"),out number))throw new InvalidOperationException("Falta identidad del disco virtual de prueba");
         Func<DiskLayout> reload=()=>ReadDiskLayouts(new Snapshot()).Single(d=>d.Number==number&&d.UniqueId==id);
@@ -110,7 +111,7 @@ internal sealed partial class MainForm
     }
     void StageResize(DiskLayout disk,PartitionLayout part,ulong bytes)
     {
-        pendingResizes.RemoveAll(p=>p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        pendingResizes.RemoveAll(p=>!p.IsVirtual&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
         if(bytes!=part.Size)pendingResizes.Add(new PendingResize {Disk=disk,Part=part,Bytes=bytes});
         UpdatePending();RenderDiskMaps();
     }
@@ -125,7 +126,7 @@ internal sealed partial class MainForm
     {
         if(applyingChanges||pendingResizes.Count==0)return;
         string summary=string.Join(Environment.NewLine,pendingResizes.Select(p=>p.Description));
-        if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+"Se modificarán estas particiones. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
+        if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+"Se aplicarán las operaciones indicadas. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
         applyingChanges=true;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
         bool preserveQueue=false;
         var closeGuard=new FormClosingEventHandler((s,e)=>e.Cancel=true);FormClosing+=closeGuard;
@@ -169,7 +170,7 @@ internal sealed partial class MainForm
         editingDisk=disk;editingPartition=part;previewUpdating=true;
         // Reset the control range before setting a different partition's limits.
         editSize.Minimum=0;editSize.Maximum=decimal.MaxValue;editSize.Value=0;editSize.Maximum=max;editSize.Minimum=min;
-        var queued=pendingResizes.FirstOrDefault(p=>p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        var queued=pendingResizes.FirstOrDefault(p=>!p.IsVirtual&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
         editSize.Value=Math.Max(min,Math.Min(max,decimal.Floor((queued==null?part.Size:queued.Bytes)/1048576m)));
         previewUpdating=false;
         resizePreview.Minimum=(ulong)min*1048576UL;resizePreview.Maximum=(ulong)max*1048576UL;resizePreview.Target=(ulong)editSize.Value*1048576UL;resizePreview.Invalidate();
@@ -180,7 +181,8 @@ internal sealed partial class MainForm
 internal sealed class PendingResize
 {
     public DiskLayout Disk;public PartitionLayout Part;public ulong Bytes;public string FileSystem,VolumeId;
-    public string Description {get{if(FileSystem!=null)return "FORMATEAR · Disco "+Disk.Number+" · "+Part.Letter+": · "+Part.FileSystem+" → "+FileSystem+" · BORRA ARCHIVOS";return "Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":): "+(Part.Size/1073741824d).ToString("0.##")+" → "+(Bytes/1073741824d).ToString("0.##")+" GiB";}}
+    public string VirtualAction,VirtualPath;public bool IsVirtual {get{return VirtualAction!=null;}}
+    public string Description {get{if(IsVirtual)return (VirtualAction=="create"?"CREAR VHD de prueba · "+(Bytes/1048576)+" MiB · GPT / NTFS (mitad) + espacio sin asignar":VirtualAction=="attach"?"CONECTAR VHD":"DESCONECTAR VHD (conservar archivo)")+" · "+VirtualPath;if(FileSystem!=null)return "FORMATEAR · Disco "+Disk.Number+" · "+Part.Letter+": · "+Part.FileSystem+" → "+FileSystem+" · BORRA ARCHIVOS";return "Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":): "+(Part.Size/1073741824d).ToString("0.##")+" → "+(Bytes/1073741824d).ToString("0.##")+" GiB";}}
 }
 internal sealed class ResizePreview : Control
 {

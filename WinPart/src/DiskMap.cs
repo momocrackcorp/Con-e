@@ -52,7 +52,7 @@ internal sealed partial class MainForm
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
+        toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
         var legend=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(8,3,3,3)};
         foreach(string fs in new[]{"NTFS","FAT32","EXFAT","UNALLOCATED"})legend.Controls.Add(new Label {Text=fs=="UNALLOCATED"?"Sin asignar":fs,AutoSize=true,BackColor=FileSystemPalette.Get(fs),ForeColor=fs=="EXFAT"?Color.White:Color.Black,Padding=new Padding(4)});
         legend.Controls.Add(new Label {Text="Interior amarillo: usado · blanco: libre · rayado: no disponible",AutoSize=true,Margin=new Padding(6)});toolbar.Controls.Add(legend);
@@ -105,7 +105,7 @@ internal sealed partial class MainForm
                 int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
                 foreach(var p in segments.Count>0?segments:disk.Partitions)
                 {
-                    var queued=pendingResizes.FirstOrDefault(q=>q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
+                    var queued=pendingResizes.FirstOrDefault(q=>!q.IsVirtual&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
                     string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
                     var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+p.FileSystem};var swatch=new Bitmap(16,16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,1,1,14,14);swatchSources.Add(swatch);swatches.Images.Add(swatch);
                     item.ImageIndex=swatches.Images.Count-1;list.Items.Add(item);

@@ -75,7 +75,7 @@ internal sealed partial class MainForm
     }
     void StageFormat(DiskLayout disk,PartitionLayout part,string fs,string volumeId)
     {
-        pendingResizes.RemoveAll(p=>p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
+        pendingResizes.RemoveAll(p=>!p.IsVirtual&&p.Disk.UniqueId==disk.UniqueId&&p.Part.Number==part.Number);
         pendingResizes.Add(new PendingResize {Disk=disk,Part=part,FileSystem=fs,VolumeId=volumeId});UpdatePending();RenderDiskMaps();
         inlineEditor.Visible=true;formatEditor.Visible=true;partitionInfo.Visible=false;
     }

@@ -10,7 +10,8 @@ using System.Windows.Forms;
 internal sealed class VolumeInfo
 {
     public string Name;
-    public double TotalGiB, FreeGiB;
+    public double TotalGiB, FreeGiB;public string FileSystem="No disponible",Label="";
+    public override string ToString(){return Name+(string.IsNullOrWhiteSpace(Label)?"":" · "+Label);}
 }
 
 internal sealed partial class MainForm
@@ -32,7 +33,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.12.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.13.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -187,15 +188,10 @@ internal sealed partial class MainForm
 
             var disk = Card("▰", "Almacenamiento");
             if (current == null || current.Volumes.Count == 0) Line(disk, current == null ? "Pendiente de lectura" : "No se pudieron leer las unidades.");
-            else foreach (var volume in current.Volumes)
-            {
-                Line(disk, "Unidad " + volume.Name, true);
-                Meter(disk, 100 * (volume.TotalGiB - volume.FreeGiB) / volume.TotalGiB, "Espacio ocupado " + volume.Name);
-                Line(disk, volume.FreeGiB.ToString("0.0") + " GiB libres de " + volume.TotalGiB.ToString("0.0") + " GiB");
-            }
+            else disk.Controls.Add(new StorageSummary(current.Volumes,OpenStorage));
             Line(disk, Read("Tipos de almacenamiento"));
             InlineDetails(disk, "Ver discos físicos", "Disco físico", "Particiones");
-            Help(disk, "La barra indica espacio ocupado. No evalúa la salud del disco. Cada unidad puede ser una partición de un mismo disco físico.");
+            Help(disk, "El anillo muestra espacio ocupado y libre. Ver uso y analizar carpetas abre distribución, actividad de lectura/escritura y telemetría disponible. Cada unidad puede ser una partición del mismo disco.");
 
             var network = Card("", "Tarjeta de red");
             Line(network, Read("Adaptadores de red"), true);
@@ -292,7 +288,7 @@ internal sealed partial class MainForm
             var parsed=ParseRamSlots(raw.ToArray());if(parsed.Count!=2||!parsed[0].State.StartsWith("Ocupada")||!parsed[1].State.StartsWith("Libre"))throw new InvalidOperationException("Estados SMBIOS de RAM incorrectos");
             form.current.CoreThreads.AddRange(new[]{2,2,2,2,2,2,2,2,1,1,1,1});
             var topology=CpuTopology.Read();if(topology.Count==0||topology.Sum()==0)throw new InvalidOperationException("No se obtuvo topología real de CPU");
-            form.current.Volumes.Add(new VolumeInfo { Name = "C:", TotalGiB = 500, FreeGiB = 320 });
+            form.current.Volumes.Add(new VolumeInfo { Name = "C:",FileSystem="NTFS",Label="SISTEMA", TotalGiB = 500, FreeGiB = 320 });
             form.current.ProblemDevices.Add("audio");
             var unknown = new HardwareItem { Name = "Dispositivo PCI sin identificar (prueba)", Category = "Otros dispositivos", DeviceId = @"PCI\VEN_1234&DEV_5678\INSTANCIA", SearchId = @"PCI\VEN_1234&DEV_5678&SUBSYS_11112222&REV_01", ErrorCode = 28 };
             ParseIdentifiers(unknown);
@@ -346,6 +342,7 @@ internal sealed partial class MainForm
             form.hardwareList.Items[0].Selected = true; form.hardwareList.Focus(); Application.DoEvents();
             if (form.selectedHardware != unknown || form.hardwareDetails.Items.Count == 0) throw new InvalidOperationException("Ficha de hardware ausente");
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "hardware-desconocido.png"), ImageFormat.Png); }
+            StorageSmokeTest(form,dir);
             form.tabs.SelectedIndex = 0; form.current = new Snapshot(); form.RenderDashboard(); Application.DoEvents();
             form.Scale(new SizeF(2, 2)); form.ResizeCards(); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-escala-doble.png"), ImageFormat.Png); }

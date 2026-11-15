@@ -47,7 +47,7 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.12.1";
+        Text = "Con-E · Diagnóstico y herramientas · v0.13.0";
         BackColor = CanvasColor;
         Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -103,7 +103,7 @@ internal sealed partial class MainForm : Form
         {
             var data = await Task.Run(() => Collect());
             if (IsDisposed || Disposing) return;
-            current = data;
+            current = data;storageView?.SetVolumes(data.Volumes);
             Fill(summary, data.Summary); ResizeSummary(); Fill(drivers, data.Drivers); RenderDashboard(); RenderHardwareBrowser();
             status.Text = data.Warnings.Count == 0 ? "Lectura completada · " + data.Drivers.Count + " registros de controladores" : "Lectura parcial · " + string.Join(" | ", data.Warnings);
         }
@@ -168,9 +168,9 @@ internal sealed partial class MainForm : Form
         { add("Fabricante de placa base", Value(o, "Manufacturer")); add("Modelo de placa base", Value(o, "Product")); add("Serie de placa base", Value(o, "SerialNumber")); });
         Query(data, "Discos", "SELECT Model,Size FROM Win32_DiskDrive", o =>
         { double bytes; add("Disco físico", Value(o, "Model") + (double.TryParse(Value(o, "Size"), out bytes) ? " · " + (bytes / 1073741824d).ToString("0.##") + " GiB" : "")); });
-        Query(data, "Unidades", "SELECT DeviceID,Size,FreeSpace FROM Win32_LogicalDisk WHERE DriveType=3", o =>
+        Query(data, "Unidades", "SELECT DeviceID,Size,FreeSpace,FileSystem,VolumeName FROM Win32_LogicalDisk WHERE DriveType=3 OR DriveType=2", o =>
         { double total, free; if (double.TryParse(Value(o, "Size"), out total) && total > 0 && double.TryParse(Value(o, "FreeSpace"), out free) && free >= 0 && free <= total)
-          { data.Volumes.Add(new VolumeInfo { Name = Value(o, "DeviceID"), TotalGiB = total / 1073741824d, FreeGiB = free / 1073741824d }); add("Unidad " + Value(o, "DeviceID"), (free / 1073741824d).ToString("0.##") + " GiB libres de " + (total / 1073741824d).ToString("0.##") + " GiB"); }
+          { data.Volumes.Add(new VolumeInfo { Name = Value(o, "DeviceID"),FileSystem=Value(o,"FileSystem"),Label=Value(o,"VolumeName"), TotalGiB = total / 1073741824d, FreeGiB = free / 1073741824d }); add("Unidad " + Value(o, "DeviceID"), (free / 1073741824d).ToString("0.##") + " GiB libres de " + (total / 1073741824d).ToString("0.##") + " GiB"); }
         });
         var states = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var deviceRows = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
@@ -202,7 +202,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.12.1\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.13.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

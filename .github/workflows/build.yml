@@ -68,7 +68,7 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.12.1-portable
+          name: Con-E-v0.13.0-portable
           path: output/
           if-no-files-found: error
 

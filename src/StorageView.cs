@@ -18,8 +18,8 @@ internal sealed class StorageView : UserControl
     readonly FlowLayoutPanel row=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true};
     readonly FlowLayoutPanel left=new FlowLayoutPanel {FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink},stats=new FlowLayoutPanel {FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink};
     readonly Label heading=Label("Disco físico",true),diskType=Label(""),title=Label("Volumen",true),capacity=Label(""),health=Label("Estado: No disponible"),temperature=Label("Temperatura: No disponible"),lifetime=Label("Horas encendido: No disponible"),totals=Label("Datos acumulados: No disponibles"),manufacture=Label("Fabricación: No disponible"),io=Label("Lectura / escritura: No disponible"),notice=Label(""),scanStatus=Label("Pulsa Analizar carpetas para desglosar el contenido."),scanDetail=Label("Sólo carpetas de la raíz, sumando sus subcarpetas. No se muestra ningún archivo individual.");
-    readonly DiskMiniature miniature=new DiskMiniature {Width=100,Height=86};
-    readonly StorageRing ring=new StorageRing {Height=190};readonly FolderChart folders=new FolderChart();
+    readonly DiskMiniature miniature=new DiskMiniature {Width=64,Height=48};
+    readonly StorageRing ring=new StorageRing {Height=160};readonly FolderChart folders=new FolderChart();
     readonly Button analyze=Button("Analizar carpetas"),cancel=Button("Cancelar análisis");
     readonly Dictionary<string,StorageScan> cache=new Dictionary<string,StorageScan>();
     PhysicalDiskInfo disk;PhysicalPartitionInfo partition;StorageDeviceInfo device;
@@ -35,15 +35,15 @@ internal sealed class StorageView : UserControl
         var headingRow=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true};headingRow.Controls.AddRange(new Control[]{miniature,heading});header.Selected=true;header.Controls.AddRange(new Control[]{headingRow,diskType,volumeButtons});
         left.Controls.AddRange(new Control[]{ring,Label("Contenido del volumen",true),folders,scanStatus,scanDetail});
         stats.Controls.AddRange(new Control[]{capacity,health,temperature,lifetime,totals,manufacture,io,notice});row.Controls.AddRange(new Control[]{left,stats});volumeCard.Controls.AddRange(new Control[]{title,row});content.Controls.AddRange(new Control[]{header,volumeCard});Controls.Add(content);Controls.Add(toolbar);
-        disks.DisplayMember="Model";disks.SelectedIndexChanged+=(s,e)=>{if(!setting)ChooseDisk(disks.SelectedItem as PhysicalDiskInfo);};refresh.Click+=(s,e)=>RefreshCapacity();analyze.Click+=(s,e)=>{if(scanTask==null||scanTask.IsCompleted)scanTask=AnalyzeAsync();};cancel.Click+=(s,e)=>scanCancellation?.Cancel();
+        disks.DisplayMember="";disks.SelectedIndexChanged+=(s,e)=>{if(!setting)ChooseDisk(disks.SelectedItem as PhysicalDiskInfo);};refresh.Click+=(s,e)=>RefreshCapacity();analyze.Click+=(s,e)=>{if(scanTask==null||scanTask.IsCompleted)scanTask=AnalyzeAsync();};cancel.Click+=(s,e)=>scanCancellation?.Cancel();
         content.Resize+=(s,e)=>Fit();Load+=(s,e)=>StartMonitor();VisibleChanged+=(s,e)=>{if(Visible)StartMonitor();else StopMonitor();};Disposed+=(s,e)=>{scanCancellation?.Cancel();StopMonitor();};
     }
-    static ModernCardPanel Card(){return new ModernCardPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(16),Margin=new Padding(0,0,0,12)};}
+    static ModernCardPanel Card(){return new ModernCardPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(12),Margin=new Padding(0,0,0,12)};}
     static Label Label(string text,bool prominent=false){return new Label {Text=text,UseMnemonic=false,AutoSize=true,ForeColor=prominent?ModernTheme.Text:ModernTheme.Muted,Font=new Font("Segoe UI",prominent?12:10,prominent?FontStyle.Bold:FontStyle.Regular),Margin=new Padding(0,0,0,9)};}
     static Button Button(string text){var b=new Button {Text=text,AutoSize=true,FlatStyle=FlatStyle.Flat,Padding=new Padding(5),Margin=new Padding(4),BackColor=ModernTheme.Raised,ForeColor=ModernTheme.Accent};b.FlatAppearance.BorderColor=ModernTheme.Border;return b;}
     void Fit()
     {
-        int w=Math.Max(260,content.ClientSize.Width-content.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8),inner=w-32;
+        int w=Math.Max(260,content.ClientSize.Width-content.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8),inner=w-24;
         foreach(var c in new[]{header,volumeCard}){c.MinimumSize=c.MaximumSize=new Size(w,0);c.Width=w;}
         volumeButtons.MinimumSize=volumeButtons.MaximumSize=new Size(inner,0);row.MinimumSize=row.MaximumSize=new Size(inner,0);
         int lw=inner>=690?(int)(inner*.55):inner,rw=inner>=690?inner-lw-15:inner;left.MinimumSize=left.MaximumSize=new Size(lw,0);stats.MinimumSize=stats.MaximumSize=new Size(rw,0);ring.Width=folders.Width=Math.Max(220,lw-8);
@@ -103,6 +103,7 @@ internal sealed class StorageView : UserControl
     }
     static int StableColor(string text){uint h=2166136261;foreach(char c in text)h=(h^c)*16777619;return (int)(h%(uint)StorageFormat.Palette.Length);}
     internal void SelectVolume(string letter){var p=disk?.Partitions.FirstOrDefault(v=>v.Letter==letter);if(p!=null)ChoosePartition(p);}
+    internal string DiskSelectorText {get{return disks.Text;}}
     internal int VolumeCount {get{return disk?.Partitions.Count??0;}}
     internal string CurrentVolumeLetter {get{return partition?.Letter;}}
     internal long ChartTotal {get{return folders.Slices.Sum(s=>s.Bytes);}}

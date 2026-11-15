@@ -14,6 +14,7 @@ internal sealed class PhysicalDiskInfo
     public ulong Size;public bool Complete;readonly string inventoryInstance=Guid.NewGuid().ToString("N");
     public readonly List<PhysicalPartitionInfo> Partitions=new List<PhysicalPartitionInfo>();
     public bool IsVirtual {get{return BusType==14||BusType==15;}}
+    public override string ToString(){return "Disco "+Number+" · "+Model;}
     public string Key {get{return Number+"|"+(UniqueId.Length>0?UniqueId:Serial.Length>0?Serial:inventoryInstance);}}
     public bool ModelMentionsM2 {get{return Regex.IsMatch(Model,@"\bM[.]?2\b",RegexOptions.IgnoreCase);}}
     public string Form {get{return ModelMentionsM2?"M.2 indicado en modelo":"Formato físico no confirmado";}}

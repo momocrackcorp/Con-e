@@ -27,6 +27,7 @@ internal sealed partial class MainForm
         foreach(var disk in current.PhysicalDisks)
         {
             var d=disk;var card=(ModernCardPanel)Card("","Disco "+d.Number+" · "+d.Kind);result.Add(card);
+            var cardHeader=card.Controls.OfType<FlowLayoutPanel>().First();foreach(var icon in cardHeader.Controls.OfType<ComponentPicture>().ToArray()){cardHeader.Controls.Remove(icon);icon.Dispose();}
             card.Controls.Add(new DiskMiniature {Kind=d.Art,Width=170,Height=128,Margin=new Padding(0,0,0,8),AccessibleName=d.Kind+" · miniatura ilustrativa"});
             Line(card,d.Model,true);Line(card,d.Size>0?StorageFormat.Size(d.Size):"Capacidad no disponible",true);Line(card,d.Bus+" · "+d.Style);Line(card,d.Form);
             var volumes=d.Partitions.Where(p=>p.Letter.Length>0).Select(p=>p.Title).ToArray();Line(card,volumes.Length>0?string.Join(" · ",volumes):d.Partitions.Count+" partición(es) · sin letra de unidad");

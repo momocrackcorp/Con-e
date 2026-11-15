@@ -26,13 +26,14 @@ internal static class StorageScanner
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] internal static extern bool CreateHardLink(string link,string existing,IntPtr reserved);
     static string LongPath(string path){return path.StartsWith(@"\\?\",StringComparison.Ordinal)?path:@"\\?\"+Path.GetFullPath(path);}
     static bool Recoverable(Exception ex){return ex is UnauthorizedAccessException||ex is IOException||ex is System.Security.SecurityException;}
-    static long Allocated(string path,FileAttributes attributes,HashSet<string> links,out bool duplicate)
+    static long Allocated(string path,FileAttributes attributes,HashSet<string> links,out bool duplicate,out uint serial)
     {
-        duplicate=false;
+        duplicate=false;serial=0;
         using(var file=CreateFile(LongPath(path),0x80,7,IntPtr.Zero,3,0x00300000,IntPtr.Zero)) // attributes only; never read contents or recall placeholders
         {
             if(file.IsInvalid)throw new IOException("No se pudieron consultar atributos del archivo.");
             FileInfo id;if(!GetFileInformationByHandle(file,out id))throw new IOException("No se pudo identificar el archivo.");
+            serial=id.Serial;
             if(id.Links>1&&!links.Add(id.Serial+":"+id.IndexHigh+":"+id.IndexLow)){duplicate=true;return 0;}
             StandardInfo info;if(!GetFileInformationByHandleEx(file,1,out info,(uint)Marshal.SizeOf(typeof(StandardInfo))))throw new IOException("No se pudo consultar espacio asignado.");
             if((attributes&(FileAttributes.Compressed|FileAttributes.SparseFile))!=0)
@@ -43,7 +44,7 @@ internal static class StorageScanner
     internal static StorageScan Scan(string path,CancellationToken token,IProgress<StorageScanProgress> progress=null)
     {
         token.ThrowIfCancellationRequested();var root=new DirectoryInfo(Path.GetFullPath(path));if(!root.Exists)throw new DirectoryNotFoundException("La unidad ya no está disponible.");
-        var result=new StorageScan();var groups=new Dictionary<string,StorageGroup>(StringComparer.OrdinalIgnoreCase);var links=new HashSet<string>();var watch=Stopwatch.StartNew();long reported=0;
+        uint? volumeSerial=null;var result=new StorageScan();var groups=new Dictionary<string,StorageGroup>(StringComparer.OrdinalIgnoreCase);var links=new HashSet<string>();var watch=Stopwatch.StartNew();long reported=0;
         var pending=new Stack<Tuple<DirectoryInfo,string>>();pending.Push(Tuple.Create(root,""));
         while(pending.Count>0)
         {
@@ -58,7 +59,7 @@ internal static class StorageScanner
                         FileAttributes attributes=entry.Attributes;
                         if((attributes&(FileAttributes.ReparsePoint|FileAttributes.Offline))!=0){result.Skipped++;continue;}
                         var directory=entry as DirectoryInfo;if(directory!=null){pending.Push(Tuple.Create(directory,group));continue;}
-                        bool duplicate;long bytes=Allocated(entry.FullName,attributes,links,out duplicate);if(duplicate){result.LinksSkipped++;continue;}
+                        bool duplicate;uint serial;long bytes=Allocated(entry.FullName,attributes,links,out duplicate,out serial);if(volumeSerial.HasValue&&volumeSerial.Value!=serial)throw new InvalidOperationException("La unidad cambió durante el análisis. Actualiza y vuelve a analizar.");volumeSerial=serial;if(duplicate){result.LinksSkipped++;continue;}
                         StorageGroup bucket;if(!groups.TryGetValue(group,out bucket)){bucket=new StorageGroup {Name=group};groups.Add(group,bucket);}bucket.Bytes=checked(bucket.Bytes+bytes);result.Files++;
                     }
                     catch(Exception ex) when(Recoverable(ex)){result.Skipped++;}

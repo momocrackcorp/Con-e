@@ -10,11 +10,11 @@ internal sealed partial class MainForm
     void InitializeModernUI()
     {
         BackColor=ModernTheme.Canvas;ForeColor=ModernTheme.Text;actions.BackColor=ModernTheme.Surface;status.BackColor=ModernTheme.Surface;status.ForeColor=ModernTheme.Muted;
-        ApplyDarkTheme(this);HandleCreated+=(s,e)=>DarkTitleBar();if(IsHandleCreated)DarkTitleBar();
+        ApplyModernTheme(this);HandleCreated+=(s,e)=>LightTitleBar();if(IsHandleCreated)LightTitleBar();
         FormClosed+=(s,e)=>StopCpuMonitor();Disposed+=(s,e)=>StopCpuMonitor();
     }
-    void DarkTitleBar(){try{int enabled=1;DwmSetWindowAttribute(Handle,20,ref enabled,4);}catch(DllNotFoundException){}catch(EntryPointNotFoundException){}}
-    static void ApplyDarkTheme(Control root)
+    void LightTitleBar(){try{int enabled=0;DwmSetWindowAttribute(Handle,20,ref enabled,4);}catch(DllNotFoundException){}catch(EntryPointNotFoundException){}}
+    static void ApplyModernTheme(Control root)
     {
         foreach(Control c in root.Controls)
         {
@@ -22,11 +22,11 @@ internal sealed partial class MainForm
             else if(c is Panel||c is TabPage||c is SplitContainer)
             {if(!(c is ModernCardPanel)&&c.BackColor!=ModernTheme.Surface&&c.BackColor!=ModernTheme.Raised&&c.BackColor!=ModernTheme.Canvas)c.BackColor=ModernTheme.Canvas;}
             if(c is Label&&c.ForeColor==SystemColors.ControlText)c.ForeColor=ModernTheme.Muted;
-            ApplyDarkTheme(c);
+            ApplyModernTheme(c);
         }
     }
     static void StyleAction(Button button)
     {
-        button.FlatStyle=FlatStyle.Flat;button.BackColor=ModernTheme.Raised;button.ForeColor=ModernTheme.Accent;button.FlatAppearance.BorderColor=ModernTheme.Border;button.FlatAppearance.MouseOverBackColor=Color.FromArgb(48,65,87);button.FlatAppearance.MouseDownBackColor=Color.FromArgb(40,80,125);
+        button.FlatStyle=FlatStyle.Flat;button.BackColor=ModernTheme.Raised;button.ForeColor=ModernTheme.Accent;button.FlatAppearance.BorderColor=ModernTheme.Border;button.FlatAppearance.MouseOverBackColor=Color.FromArgb(228,238,252);button.FlatAppearance.MouseDownBackColor=Color.FromArgb(213,229,250);
     }
 }

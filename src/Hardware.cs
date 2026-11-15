@@ -93,7 +93,7 @@ internal sealed partial class MainForm
             foreach (var item in HardwareInCategory(category).OrderByDescending(h => h.ErrorCode.GetValueOrDefault() != 0).ThenBy(h => h.Name))
             {
                 var row = new ListViewItem(new[] { item.Name, item.ErrorCode.HasValue ? PnpMeaning(item.ErrorCode.Value) : "Sin estado PnP disponible" }) { Tag = item };
-                if (item.ErrorCode.GetValueOrDefault() != 0) row.ForeColor = Color.FromArgb(255,190,97);
+                if (item.ErrorCode.GetValueOrDefault() != 0) row.ForeColor = Color.FromArgb(140,85,0);
                 row.ToolTipText = item.Name; hardwareList.Items.Add(row);
             }
             if (hardwareList.Items.Count > 0) hardwareList.Items[0].Selected = true;
@@ -248,7 +248,7 @@ internal sealed class ComponentPicture : Control
             {
                 g.DrawRectangle(pen, 12, 11, 40, 42); g.DrawRectangle(pen, 19, 18, 26, 22);
                 g.DrawLine(pen, 19, 47, 33, 47); g.DrawLine(pen, 38, 47, 46, 47);
-                using(var font=new Font("Segoe UI",8,FontStyle.Bold))g.DrawString("SSD",font,Brushes.LightSkyBlue,20,23);
+                using(var font=new Font("Segoe UI",8,FontStyle.Bold))g.DrawString("SSD",font,Brushes.DarkSlateBlue,20,23);
             }
             else if (kind.Contains("almacenamiento")) { g.DrawRectangle(pen, 15, 12, 34, 40); g.DrawEllipse(pen, 22, 18, 20, 20); g.DrawLine(pen, 32, 28, 43, 42); g.DrawLine(pen, 21, 46, 28, 46); }
             else if (kind.Contains("red") || kind.Contains("usb")) { g.DrawRectangle(pen, 24, 9, 16, 12); g.DrawLine(pen, 32, 22, 32, 36); g.DrawLine(pen, 13, 36, 51, 36); g.DrawLine(pen, 13, 36, 13, 44); g.DrawLine(pen, 51, 36, 51, 44); g.DrawRectangle(pen, 7, 44, 13, 10); g.DrawRectangle(pen, 44, 44, 13, 10); }

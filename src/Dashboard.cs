@@ -32,7 +32,7 @@ internal sealed partial class MainForm
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.12.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.12.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -225,7 +225,7 @@ internal sealed partial class MainForm
             var driver = Card("⚒", "Controladores");
             var driverText = current == null ? "Pendiente de lectura" : !current.PnpReadComplete ? "Lectura PnP incompleta" : current.ProblemDevices.Count == 0 ? "Sin error PnP informado" : current.ProblemDevices.Count + " dispositivo(s) por revisar";
             var driverState = Line(driver, driverText, true);
-            if (current != null && (current.ProblemDevices.Count > 0 || !current.PnpReadComplete)) driverState.ForeColor = Color.FromArgb(255,190,97);
+            if (current != null && (current.ProblemDevices.Count > 0 || !current.PnpReadComplete)) driverState.ForeColor = Color.FromArgb(140,85,0);
             Line(driver, current == null ? "" : current.Drivers.Count + " dispositivos en inventario");
             driver.Controls.Add(ActionButton("Revisar dispositivos", () => tabs.SelectedTab = driverPage));
             Help(driver, "Permiten que Windows se comunique con el hardware. La ausencia de errores PnP no garantiza buen funcionamiento.");

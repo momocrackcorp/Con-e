@@ -9,7 +9,7 @@ namespace UIModernization
 {
     public static class ModernTheme
     {
-        public static readonly Color Canvas=Color.FromArgb(18,21,27),Surface=Color.FromArgb(30,34,43),Raised=Color.FromArgb(39,45,57),Border=Color.FromArgb(57,65,80),Text=Color.FromArgb(235,240,248),Muted=Color.FromArgb(166,181,203),Accent=Color.FromArgb(89,166,255),Track=Color.FromArgb(48,57,72);
+        public static readonly Color Canvas=Color.FromArgb(242,245,249),Surface=Color.White,Raised=Color.FromArgb(239,244,251),Border=Color.FromArgb(211,221,233),Text=Color.FromArgb(35,50,71),Muted=Color.FromArgb(80,98,121),Accent=Color.FromArgb(40,91,181),Track=Color.FromArgb(226,233,242);
         internal static GraphicsPath Rounded(RectangleF r,float radius)
         {
             var p=new GraphicsPath();float d=Math.Max(1,Math.Min(radius*2,Math.Min(r.Width,r.Height)));p.AddArc(r.X,r.Y,d,d,180,90);p.AddArc(r.Right-d,r.Y,d,d,270,90);p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90);p.AddArc(r.X,r.Bottom-d,d,d,90,90);p.CloseFigure();return p;

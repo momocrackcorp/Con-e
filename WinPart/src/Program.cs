@@ -35,7 +35,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Text="WinPart · Gestor de particiones · v0.6.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="WinPart · Gestor de particiones · v0.7.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -57,8 +57,8 @@ internal sealed partial class MainForm : Form
     {
         using(var form=new MainForm())
         {
-            var disk=new DiskLayout {Number=0,Name="SSD simulado",Style="GPT",UniqueId="SIMULATED",Complete=true,Size=500UL*1073741824};
-            var p=new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,Letter="D",Type="Datos básicos",FileSystem="NTFS",VolumeSize=200UL*1073741824,Free=50UL*1073741824};disk.Partitions.Add(p);
+            var disk=new DiskLayout {Number=0,Name="Disco simulado",BusType=15,Style="GPT",UniqueId="SIMULATED",Complete=true,Size=500UL*1073741824};
+            var p=new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,Letter="Z",Type="Datos básicos",FileSystem="NTFS",VolumeSize=200UL*1073741824,Free=50UL*1073741824};disk.Partitions.Add(p);
             disk.Partitions.Add(new PartitionLayout {Number=2,Offset=210UL*1073741824,Size=100UL*1073741824,Letter="E",Type="Datos básicos",FileSystem="exFAT",VolumeSize=100UL*1073741824,Free=70UL*1073741824});
             if(FileSystemPalette.Get("NTFS")==FileSystemPalette.Get("exFAT")||FileSystemPalette.Used==FileSystemPalette.Unused)throw new Exception("Paleta sin diferenciación");
             var boxes=new PartitionStrip(disk,disk.Segments()){Width=900,Height=70}.Blocks();if(boxes.Count!=disk.Segments().Count||boxes.Sum(b=>b.Width)!=900)throw new Exception("Mapa de bloques inconsistente");
@@ -90,6 +90,15 @@ internal sealed partial class MainForm : Form
             if(newPlan.Count!=1||!newPlan[0].Create||newPlan[0].FileSystem!="exFAT"||disk.Partitions.Count!=2)throw new Exception("Preparación de nueva partición incorrecta");
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"nueva-particion-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descarte de nueva partición modifica datos");
+            if(form.actions.Controls.OfType<Button>().Count()!=9||form.deletePartition.Image==null||form.createPartition.Image==null||form.deletePartition.TextImageRelation!=TextImageRelation.ImageAboveText)throw new Exception("Barra de iconos incompleta");
+            p.IsBoot=true;if(CanDelete(disk,p))throw new Exception("Permite eliminar arranque");p.IsBoot=false;p.IsSystem=true;if(CanDelete(disk,p))throw new Exception("Permite eliminar sistema");p.IsSystem=false;
+            var protectedPart=new PartitionLayout {Number=3,Letter="Z",Type="EFI"};if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar EFI");protectedPart.Type="Reservada MSR";if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar MSR");protectedPart.Type="Recuperación";if(CanDelete(disk,protectedPart))throw new Exception("Permite eliminar recuperación");
+            var mbr=new DiskLayout {Style="MBR"};var role=new PartitionLayout {Primary=true};if(CommandIcons.Role(mbr,role)!="Primaria MBR")throw new Exception("Icono primaria incorrecto");role.Primary=false;if(CommandIcons.Role(mbr,role)!="Lógica MBR"||CommandIcons.ForPartition(mbr,role)!="logical")throw new Exception("Icono lógica incorrecto");if(CommandIcons.Role(disk,p)!="Partición GPT"||CommandIcons.DiskKind(disk)!="VHD / imagen virtual")throw new Exception("Clasificación GPT/VHD incorrecta");
+            form.SelectPartition(disk,p);if(!form.deletePartition.Enabled)throw new Exception("No habilita eliminar datos");form.deletePartition.PerformClick();
+            var deletePlan=DecodeOperations(EncodeOperations(form.pendingResizes));if(deletePlan.Count!=1||!deletePlan[0].Delete||disk.Partitions.Count!=2)throw new Exception("Preparar eliminación modifica datos o pierde plan");
+            using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-eliminar-pendiente.png"),ImageFormat.Png);}
+            form.discardPending.PerformClick();if(form.pendingResizes.Count!=0||disk.Partitions.Count!=2)throw new Exception("Descartar eliminación modifica datos");
+            form.Size=new Size(730,650);form.PerformLayout();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"barra-estrecha.png"),ImageFormat.Png);}
             var real=ReadDiskLayouts(new Snapshot());if(!real.Any(d=>d.Partitions.Count>0))throw new Exception("La consulta real no obtuvo particiones");
             File.WriteAllText(Path.Combine(dir,"resultado.txt"),"OK: aplicación independiente, cola visual, descarte y lectura real.");form.Close();
         }

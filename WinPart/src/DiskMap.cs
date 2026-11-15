@@ -11,7 +11,7 @@ using System.Windows.Forms;
 
 internal sealed class DiskLayout
 {
-    public uint Number;
+    public uint Number;public ushort BusType;
     public string Name, Style;
     public string UniqueId="";
     public ulong Size;
@@ -37,7 +37,7 @@ internal sealed class PartitionLayout
     public ulong Offset, Size;
     public string Letter="", Type="No determinado", FileSystem="No disponible", Label="";
     public ulong? Free, VolumeSize;
-    public bool Gap,IsBoot,IsSystem;
+    public bool Gap,IsBoot,IsSystem;public bool? Primary;
     public string Title { get { return Gap ? Type : (Letter.Length>0 ? Letter + ": " : "Partición " + Number + " · ") + Type; } }
 }
 internal sealed partial class MainForm
@@ -52,11 +52,11 @@ internal sealed partial class MainForm
     {
         var panel=new Panel { Dock=DockStyle.Fill };
         var toolbar=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,WrapContents=true,Padding=new Padding(10)};
-        operationToolbar=toolbar;toolbar.Controls.Add(BuildVirtualButton());toolbar.Controls.Add(BuildCreateButton());toolbar.Controls.Add(resizePartition);toolbar.Controls.Add(formatButton);toolbar.Controls.Add(applyPending);toolbar.Controls.Add(discardPending);
+        BuildCreateButton();BuildDeleteCommand();PopulateCommandBar(BuildVirtualButton());operationToolbar=actions;
         var legend=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(8,3,3,3)};
         foreach(string fs in new[]{"NTFS","FAT32","EXFAT","UNALLOCATED"})legend.Controls.Add(new Label {Text=fs=="UNALLOCATED"?"Sin asignar":fs,AutoSize=true,BackColor=FileSystemPalette.Get(fs),ForeColor=fs=="EXFAT"?Color.White:Color.Black,Padding=new Padding(4)});
         legend.Controls.Add(new Label {Text="Interior amarillo: usado · blanco: libre · rayado: no disponible",AutoSize=true,Margin=new Padding(6)});toolbar.Controls.Add(legend);
-        toolbar.Controls.Add(new Label {Text="Preparar operaciones → revisar pendientes → Aplicar. Formatear borra archivos.",AutoSize=true,Margin=new Padding(8)});
+        toolbar.Controls.Add(new Label {Text="Preparar → revisar pendientes → Aplicar. Eliminar y formatear borran datos.",AutoSize=true,Margin=new Padding(8)});
         resizePartition.Click+=(s,e)=>{if(selectedEditDisk!=null&&selectedEditPartition!=null)EditPartition(selectedEditDisk,selectedEditPartition);};
         panel.Controls.Add(diskMaps);panel.Controls.Add(partitionInfo);panel.Controls.Add(BuildInlineEditor());panel.Controls.Add(BuildFormatEditor());panel.Controls.Add(toolbar);
         diskMaps.Resize+=(s,e)=>FitDiskGroups();
@@ -71,8 +71,8 @@ internal sealed partial class MainForm
     static string Space(ulong bytes) { return bytes < 1048576 ? bytes+" bytes" : bytes < 1073741824 ? (bytes/1048576d).ToString("0.##")+" MiB" : (bytes/1073741824d).ToString("0.##")+" GiB"; }
     void SelectPartition(DiskLayout disk, PartitionLayout p)
     {
-        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);formatButton.Enabled=CanFormat(disk,p);createPartition.Enabled=CanCreate(disk,p);
-        partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+Environment.NewLine+
+        selectedEditDisk=disk;selectedEditPartition=p;resizePartition.Enabled=CanResize(disk,p);formatButton.Enabled=CanFormat(disk,p);createPartition.Enabled=CanCreate(disk,p);deletePartition.Enabled=CanDelete(disk,p);
+        partitionInfo.Text="Disco "+disk.Number+" · "+disk.Name+Environment.NewLine+p.Title+" · "+CommandIcons.Role(disk,p)+Environment.NewLine+
             "Tamaño del bloque: "+Space(p.Size)+" · Offset: "+p.Offset.ToString(CultureInfo.InvariantCulture)+" bytes"+Environment.NewLine+
             (p.Gap ? (CanCreate(disk,p)?"Espacio sin asignar. Pulsa Nueva partición para elegir tamaño, etiqueta y sistema de archivos.":"Intervalo demasiado pequeño o reservado para alineación/metadatos; no se puede usar para crear una partición.") :
             "Sistema de archivos: "+p.FileSystem+" · Etiqueta: "+p.Label+Environment.NewLine+
@@ -86,7 +86,7 @@ internal sealed partial class MainForm
         try
         {
             foreach(Control old in diskMaps.Controls.Cast<Control>().ToArray())old.Dispose();
-            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;formatButton.Enabled=false;createPartition.Enabled=false;
+            selectedEditDisk=null;selectedEditPartition=null;resizePartition.Enabled=false;formatButton.Enabled=false;createPartition.Enabled=false;deletePartition.Enabled=false;
             partitionInfo.Height=Math.Max(140,TextRenderer.MeasureText("Ag",Font).Height*6+12);
             partitionInfo.Text="Selecciona un bloque del mapa o una fila para ver sus datos. Las particiones pequeñas se seleccionan también en la lista.";
             if(diskLayouts.Count==0) { diskMaps.Controls.Add(new Label { Text="No se pudo obtener el mapa físico de discos. Revisa las incidencias de lectura.", AutoSize=true, MaximumSize=new Size(500,0) });return; }
@@ -97,9 +97,12 @@ internal sealed partial class MainForm
                 group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
                 group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 group.RowStyles.Add(new RowStyle(SizeType.Absolute,Math.Max(90,lineHeight*4+12)));
-                var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
+                var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+" · "+CommandIcons.DiskKind(disk)+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
+                var headingRow=new TableLayoutPanel {ColumnCount=2,RowCount=1,Dock=DockStyle.Top,AutoSize=true,Margin=Padding.Empty};
+                int headingSize=(int)(34*DeviceDpi/96f);headingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,headingSize+8));headingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+                var headingIcon=new PictureBox {Image=CommandIcons.Make(disk.BusType==15||disk.BusType==14?"vhd":"disk",Color.FromArgb(66,109,163),headingSize),Size=new Size(headingSize,headingSize),SizeMode=PictureBoxSizeMode.CenterImage,Margin=Padding.Empty};headingIcon.Disposed+=(s,e)=>headingIcon.Image.Dispose();headingRow.Controls.Add(headingIcon,0,0);headingRow.Controls.Add(heading,1,0);
                 var segments=disk.Segments();
-                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(90,lineHeight*4+12), Margin=new Padding(0,8,0,8) };
+                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(90,lineHeight*4+12), Margin=new Padding(0,8,0,8),IsDeleting=p=>pendingResizes.Any(q=>q.Delete&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap) };
                 var list=MakeList(new[]{"Partición","Sistema de archivos","Montaje","Etiqueta","Tamaño","Usado","Libre","Indicadores"});list.Name="partition-list";
                 var swatches=new ImageList {ImageSize=new Size(16,16),ColorDepth=ColorDepth.Depth32Bit};var swatchSources=new List<Bitmap>();list.SmallImageList=swatches;list.Disposed+=(sender,args)=>{swatches.Dispose();foreach(var image in swatchSources)image.Dispose();};list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
                 int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
@@ -107,7 +110,7 @@ internal sealed partial class MainForm
                 {
                     var queued=pendingResizes.FirstOrDefault(q=>!q.IsVirtual&&!q.Create&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
                     string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
-                    var item=new ListViewItem(new[]{p.Title,fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+p.FileSystem};var swatch=new Bitmap(16,16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,1,1,14,14);swatchSources.Add(swatch);swatches.Images.Add(swatch);
+                    var item=new ListViewItem(new[]{p.Title+(queued!=null&&queued.Delete?" (eliminar pendiente)":""),fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+CommandIcons.Role(disk,p)+" · "+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+CommandIcons.Role(disk,p)+" · "+p.FileSystem};var swatch=CommandIcons.Make(CommandIcons.ForPartition(disk,p),p.Gap?Color.Gray:Color.FromArgb(57,88,133),16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,11,11,5,5);if(queued!=null&&queued.Delete)item.ForeColor=Color.Firebrick;swatchSources.Add(swatch);swatches.Images.Add(swatch);
                     item.ImageIndex=swatches.Images.Count-1;list.Items.Add(item);
                 }
                 int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;
@@ -117,8 +120,8 @@ internal sealed partial class MainForm
                 map.Selected+=(p)=> { SelectPartition(disk,p); foreach(ListViewItem row in list.Items)row.Selected=ReferenceEquals(row.Tag,p); };
                 list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;var p=(PartitionLayout)list.SelectedItems[0].Tag;map.Selection=p;map.Invalidate();SelectPartition(disk,p);};
                 list.Resize+=(s,e)=>{int width=Math.Max(260,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(220,(int)(width*0.22));};
-                group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(200,group.Width-30),0);
-                group.Controls.Add(heading,0,0);group.Controls.Add(map,0,1);group.Controls.Add(list,0,2);diskMaps.Controls.Add(group);
+                group.Resize+=(s,e)=>heading.MaximumSize=new Size(Math.Max(180,group.Width-80),0);
+                group.Controls.Add(headingRow,0,0);group.Controls.Add(map,0,1);group.Controls.Add(list,0,2);diskMaps.Controls.Add(group);
                 if(list.Items.Count>0){var first=list.Items.Cast<ListViewItem>().FirstOrDefault(r=>!((PartitionLayout)r.Tag).Gap)??list.Items[0];first.Selected=true;map.Selection=(PartitionLayout)first.Tag;SelectPartition(disk,map.Selection);}
             }
         }
@@ -129,9 +132,9 @@ internal sealed partial class MainForm
         var result=new List<DiskLayout>();
         try
         {
-            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle,UniqueId FROM MSFT_Disk"))
+            using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT Number,FriendlyName,Size,PartitionStyle,UniqueId,BusType FROM MSFT_Disk"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
-            { result.Add(new DiskLayout { UniqueId=Value(row,"UniqueId"),Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
+            { result.Add(new DiskLayout { BusType=Convert.ToUInt16(row["BusType"]),UniqueId=Value(row,"UniqueId"),Number=Convert.ToUInt32(row["Number"]),Name=Value(row,"FriendlyName"),Size=Convert.ToUInt64(row["Size"]),Style=Value(row,"PartitionStyle")=="2"?"GPT":Value(row,"PartitionStyle")=="1"?"MBR":"RAW / no determinado" }); }
             using(var query=new ManagementObjectSearcher(@"root\Microsoft\Windows\Storage","SELECT DiskNumber,PartitionNumber,Offset,Size,DriveLetter,GptType,MbrType,IsBoot,IsSystem FROM MSFT_Partition"))
             using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
             {
@@ -194,6 +197,12 @@ internal sealed partial class MainForm
                 {ulong value;if(ulong.TryParse(Value(row,"Size"),out value))p.VolumeSize=value;if(ulong.TryParse(Value(row,"FreeSpace"),out value))p.Free=value;p.FileSystem=Value(row,"FileSystem");p.Label=Value(row,"VolumeName");}
             }catch{data.Warnings.Add("No se pudo leer el volumen "+p.Letter+":");}
         }
+        if(result.Any(d=>d.Style=="MBR"))try
+        {
+            using(var query=new ManagementObjectSearcher("SELECT DiskIndex,StartingOffset,PrimaryPartition FROM Win32_DiskPartition"))
+            using(var rows=query.Get())foreach(ManagementObject row in rows)using(row)
+            {var disk=result.FirstOrDefault(d=>d.Style=="MBR"&&d.Number==Convert.ToUInt32(row["DiskIndex"]));if(disk==null)continue;var part=disk.Partitions.FirstOrDefault(p=>p.Offset==Convert.ToUInt64(row["StartingOffset"]));if(part!=null&&row["PrimaryPartition"]!=null)part.Primary=Convert.ToBoolean(row["PrimaryPartition"]);}
+        }catch(Exception ex){data.Warnings.Add("Tipo primaria/lógica MBR: "+ex.Message);}
         return result;
     }
     static string PartitionType(string guid,string type)
@@ -206,7 +215,7 @@ internal sealed class PartitionStrip : Control
 {
     readonly DiskLayout disk;readonly List<PartitionLayout> segments;
     public PartitionLayout Selection;
-    public event Action<PartitionLayout> Selected;
+    public event Action<PartitionLayout> Selected;public Func<PartitionLayout,bool> IsDeleting;
     public PartitionStrip(DiskLayout d,List<PartitionLayout> p) {disk=d;segments=p;TabStop=true;AccessibleName="Mapa de particiones del disco "+d.Number;SetStyle(ControlStyles.Selectable|ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.AllPaintingInWmPaint,true);}
     internal List<Rectangle> Blocks()
     {
@@ -239,7 +248,9 @@ internal sealed class PartitionStrip : Control
                     using(var usedBrush=new SolidBrush(FileSystemPalette.Used))e.Graphics.FillRectangle(usedBrush,inner.X,inner.Y,used,inner.Height);
                 }
                 else if(!p.Gap)using(var unknown=new System.Drawing.Drawing2D.HatchBrush(System.Drawing.Drawing2D.HatchStyle.LightDownwardDiagonal,Color.LightGray,Color.White))e.Graphics.FillRectangle(unknown,inner);
-                if(inner.Width>65)TextRenderer.DrawText(e.Graphics,(p.Gap?"Sin asignar":(p.Letter.Length>0?p.Letter+":":"Part. "+p.Number)+" · "+p.FileSystem)+Environment.NewLine+MainForm.MapSpace(p.Size),Font,inner,Color.FromArgb(25,35,45),TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
+                if(inner.Width>100)using(var icon=CommandIcons.Make(CommandIcons.ForPartition(disk,p),Color.FromArgb(58,86,123),20))e.Graphics.DrawImage(icon,inner.X+5,inner.Y+5);
+                if(IsDeleting!=null&&IsDeleting(p)){using(var overlay=new SolidBrush(Color.FromArgb(45,210,45,45)))e.Graphics.FillRectangle(overlay,inner);}
+                if(inner.Width>65)TextRenderer.DrawText(e.Graphics,(IsDeleting!=null&&IsDeleting(p)?"ELIMINAR (pendiente)":p.Gap?"Sin asignar":(p.Letter.Length>0?p.Letter+":":"Part. "+p.Number)+" · "+p.FileSystem)+Environment.NewLine+MainForm.MapSpace(p.Size),Font,inner,Color.FromArgb(25,35,45),TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
             }
             if(ReferenceEquals(p,Selection))using(var selected=new Pen(Color.FromArgb(230,120,30),3))e.Graphics.DrawRectangle(selected,Rectangle.Inflate(box,-2,-2));
             else using(var separator=new Pen(Color.White,2))e.Graphics.DrawRectangle(separator,box);

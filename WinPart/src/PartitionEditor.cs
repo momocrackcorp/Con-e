@@ -126,8 +126,8 @@ internal sealed partial class MainForm
     {
         if(applyingChanges||pendingResizes.Count==0)return;
         string summary=string.Join(Environment.NewLine,pendingResizes.Select(p=>p.Description));
-        if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>!p.Create&&p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+"Se aplicarán las operaciones indicadas. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
-        applyingChanges=true;operationToolbar.Enabled=false;diskMaps.Enabled=false;inlineEditor.Enabled=false;actions.Enabled=false;UpdatePending();
+        if(MessageBox.Show(this,summary+Environment.NewLine+Environment.NewLine+(pendingResizes.Any(p=>!p.Create&&p.FileSystem!=null)?"ATENCIÓN: cada operación FORMATEAR BORRA TODOS LOS ARCHIVOS del volumen indicado. ":"")+(pendingResizes.Any(p=>p.Delete)?"ATENCIÓN: ELIMINAR QUITA LA PARTICIÓN Y SUS ARCHIVOS. ":"")+"Se aplicarán las operaciones indicadas. Ten un respaldo antes de continuar. ¿Aplicar todos los cambios?","Aplicar operaciones pendientes",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return;
+        applyingChanges=true;operationToolbar.Enabled=false;diskMaps.Enabled=false;inlineEditor.Enabled=false;formatEditor.Enabled=false;actions.Enabled=false;UpdatePending();
         bool preserveQueue=false;
         var closeGuard=new FormClosingEventHandler((s,e)=>e.Cancel=true);FormClosing+=closeGuard;
         try
@@ -142,7 +142,7 @@ internal sealed partial class MainForm
         catch(Exception ex){MessageBox.Show(this,"La ejecución se detuvo: "+ex.Message+Environment.NewLine+"Las operaciones terminadas no se deshacen automáticamente. Se actualizará el mapa.","Resultado",MessageBoxButtons.OK,MessageBoxIcon.Information);}
         finally
         {
-            FormClosing-=closeGuard;applyingChanges=false;operationToolbar.Enabled=true;inlineEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;
+            FormClosing-=closeGuard;applyingChanges=false;operationToolbar.Enabled=true;inlineEditor.Enabled=true;formatEditor.Enabled=true;diskMaps.Enabled=true;actions.Enabled=true;
             if(preserveQueue)UpdatePending();
             else {pendingResizes.Clear();inlineEditor.Visible=false;formatEditor.Visible=false;partitionInfo.Visible=true;UpdatePending();await RefreshData();}
         }
@@ -181,9 +181,9 @@ internal sealed partial class MainForm
 internal sealed class PendingResize
 {
     public DiskLayout Disk;public PartitionLayout Part;public ulong Bytes;public string FileSystem,VolumeId;
-    public bool Create;public ulong StartOffset;public string NewLabel="";
+    public bool Create,Delete;public ulong StartOffset;public string NewLabel="";
     public string VirtualAction,VirtualPath;public bool IsVirtual {get{return VirtualAction!=null;}}
-    public string Description {get{if(IsVirtual)return (VirtualAction=="create"?"CREAR VHD de prueba · "+(Bytes/1048576)+" MiB · GPT / NTFS (mitad) + espacio sin asignar":VirtualAction=="attach"?"CONECTAR VHD":"DESCONECTAR VHD (conservar archivo)")+" · "+VirtualPath;if(Create)return "NUEVA PARTICIÓN · Disco "+Disk.Number+" · "+(Bytes/1048576)+" MiB · "+FileSystem+" · inicio "+StartOffset+" · "+NewLabel;if(FileSystem!=null)return "FORMATEAR · Disco "+Disk.Number+" · "+Part.Letter+": · "+Part.FileSystem+" → "+FileSystem+" · BORRA ARCHIVOS";return "Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":): "+(Part.Size/1073741824d).ToString("0.##")+" → "+(Bytes/1073741824d).ToString("0.##")+" GiB";}}
+    public string Description {get{if(IsVirtual)return (VirtualAction=="create"?"CREAR VHD de prueba · "+(Bytes/1048576)+" MiB · GPT / NTFS (mitad) + espacio sin asignar":VirtualAction=="attach"?"CONECTAR VHD":"DESCONECTAR VHD (conservar archivo)")+" · "+VirtualPath;if(Delete)return "ELIMINAR · Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":) · "+(Part.Size/1048576d).ToString("0.##")+" MiB · BORRA PARTICIÓN Y ARCHIVOS";if(Create)return "NUEVA PARTICIÓN · Disco "+Disk.Number+" · "+(Bytes/1048576)+" MiB · "+FileSystem+" · inicio "+StartOffset+" · "+NewLabel;if(FileSystem!=null)return "FORMATEAR · Disco "+Disk.Number+" · "+Part.Letter+": · "+Part.FileSystem+" → "+FileSystem+" · BORRA ARCHIVOS";return "Disco "+Disk.Number+" · "+Disk.Name+" · partición "+Part.Number+" ("+Part.Letter+":): "+(Part.Size/1073741824d).ToString("0.##")+" → "+(Bytes/1073741824d).ToString("0.##")+" GiB";}}
 }
 internal sealed class ResizePreview : Control
 {

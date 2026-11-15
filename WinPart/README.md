@@ -1,4 +1,4 @@
-# WinPart v0.6.0 (nombre provisional)
+# WinPart v0.7.0 (nombre provisional)
 
 Proyecto Windows independiente extraído de Con-E. Ejecutable WinPart.exe, sin dependencia de Con-E ni herramientas externas de interfaz. Usa .NET Framework 4.8 y Storage WMI de Windows.
 
@@ -8,13 +8,13 @@ Mapa visual de discos, lista de particiones y ficha; editor de tamaño por arras
 
 ## Pendiente para un gestor completo
 
-Eliminar, mover, copiar particiones y más sistemas de archivos. No es un port completo de GParted: adapta la paleta de Utils::get_color; no incorpora el motor libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
+Mover, copiar particiones y más sistemas de archivos. No es un port completo de GParted: adapta la paleta de Utils::get_color; no incorpora el motor libparted. El objetivo es desarrollar un gestor visual para Windows; cualquier reutilización futura de código GPL requiere revisar dependencias y licencias.
 
 ## Compilar
 
 dotnet build WinPart/src/WinPart.csproj -c Release
 
-GitHub genera WinPart-v0.6.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
+GitHub genera WinPart-v0.7.0-portable por separado de Con-E. Las pruebas incluyen interfaz, cola sin escritura y reducción/ampliación con conservación de archivo sobre VHD desechable propio. En esta etapa ambos proyectos están en carpetas distintas de un mismo repositorio; WinPart se puede mover a su propio repositorio sin cambios de código.
 
 
 ## Sistemas de archivos v0.4.0
@@ -36,7 +36,7 @@ Bordes de sistemas de archivos con la paleta adaptada de GParted, interior amari
 
 Dos particiones NTFS comparten color de sistema de archivos, como en GParted. Se distinguen por letra, tamaño, posición y distribución usado/libre. El color no se asigna arbitrariamente por unidad. No se inventa el sistema de archivos de EFI o recuperación: se intenta consultar el volumen asociado aun sin letra y se muestra desconocido si no se obtiene.
 
-WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Mover, copiar y borrar particiones siguen pendientes. Nueva partición permite crear en intervalos sin asignar de discos GPT.
+WinPart se distribuye gratuitamente como software libre GPL-2.0-or-later. El paquete incluye COPYING, atribuciones, fuente completa de WinPart y fragmento upstream de la paleta. Hay créditos dentro de la aplicación. Es una aplicación Windows independiente, no una versión oficial de GParted; su motor de operaciones sigue siendo Storage WMI de Windows. Mover y copiar particiones siguen pendientes. Nueva partición permite crear en intervalos sin asignar de discos GPT.
 
 
 ## Elevación al aplicar v0.4.0
@@ -57,7 +57,7 @@ La creación prepara GPT, una partición NTFS `WINPART_TEST` que ocupa la mitad 
 
 Backend: API nativa `virtdisk.dll` para crear/conectar/desconectar y cmdlets Storage de Windows PowerShell para preparar GPT/NTFS. No requiere Hyper-V ni módulos de pago. Las pruebas de GitHub crean su propio VHD desechable, verifican escritura, desconexión/reconexión y conservación del archivo. El VHD conectado aparece en el mapa al actualizarse después de aplicar.
 
-Esta versión permite probar las operaciones ya disponibles de tamaño y formato; borrar, copiar y mover particiones siguen siendo pasos siguientes del proyecto.
+Esta versión permite probar las operaciones ya disponibles de tamaño y formato; copiar y mover particiones siguen siendo pasos siguientes del proyecto.
 
 
 ## Nueva partición v0.6.0
@@ -69,3 +69,16 @@ Sólo se admite GPT leído íntegramente, con identidad inequívoca. Se alinean 
 FAT32 está limitado por este motor a 32 MiB–32 GiB; el mínimo general de creación es 16 MiB. RAW significa partición creada sin sistema de archivos. ext4, btrfs y swap no se ofrecen como operaciones disponibles: falta implementar sus motores. ReFS tampoco está implementado.
 
 Las pruebas sobre VHD desechable crean NTFS, FAT32, exFAT y RAW, comprueban el offset, tamaño, etiqueta/letra, escritura en los formatos disponibles, conservación del contenido existente y rechazo de una instantánea obsoleta.
+
+
+## Barra gráfica y eliminación v0.7.0
+
+Barra con iconos grandes de trazo redondeado, colores por acción y texto debajo: Actualizar, Crear partición, Eliminar, Formatear, Ajustar tamaño, Disco virtual, Aplicar, Descartar y Acerca de. Los glifos vectoriales son originales de WinPart, con estética de contorno similar a Lucide; no se incorporan iconos ni código de WinRAR o Lucide. Se rasterizan al DPI de la ventana sin descargas ni dependencias nuevas. La barra pasa a varias filas en ventanas estrechas.
+
+**Eliminar** prepara en la cola la eliminación de una partición de datos básicos GPT con letra. Se marca en rojo en el mapa y la tabla; el disco se mantiene intacto hasta confirmar Aplicar. El resumen identifica disco, número de partición, letra y tamaño y advierte de la pérdida de los archivos. Descartar no modifica el disco. UAC sólo al aplicar, mediante auxiliar; la ventana sigue abierta. No se fuerza la eliminación de un volumen en uso.
+
+Se bloquean Windows, sistema/arranque, EFI, MSR, recuperación, la partición que contiene WinPart y volúmenes con paginación activa. Se comprueban también rutas de montaje en carpetas. Antes de cada eliminación se revalida identidad del disco y volumen, número, offset, tamaño, letra y tipo GPT. No se ofrece eliminación MBR en esta versión.
+
+Los encabezados indican VHD/imagen respaldada por archivo (BusType 15), disco virtual (14), USB (7) o tipo no informado cuando corresponde. Las filas muestran icono de GPT, primaria/lógica MBR (Win32_DiskPartition.PrimaryPartition, asociada por disco y offset), sistema/EFI/MSR, recuperación o espacio sin asignar. GPT no se etiqueta como primaria/lógica MBR. Se mantiene el color del sistema de archivos como indicador complementario.
+
+Las pruebas usan un VHD propio desechable: crear cuatro particiones, eliminar la exFAT, verificar el hueco resultante y que el contenido de otra partición no cambia. Se comprueban protecciones, serialización, preparación/descarte sin escritura y clasificación de iconos. Las capturas incluyen barra normal y estrecha.

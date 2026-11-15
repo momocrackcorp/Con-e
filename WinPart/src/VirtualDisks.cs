@@ -20,6 +20,7 @@ internal sealed partial class MainForm
         menu.Items.Add("Crear disco virtual…",null,(s,e)=>PrepareVirtualCreate());
         menu.Items.Add("Conectar archivo VHD…",null,(s,e)=>PrepareVirtualFile("attach"));
         menu.Items.Add("Desconectar VHD (conservar archivo)…",null,(s,e)=>PrepareVirtualFile("detach"));
+        for(int i=0;i<menu.Items.Count;i++){var item=menu.Items[i];item.Image=CommandIcons.Make(i==0?"create":i==1?"vhd":"discard",System.Drawing.Color.FromArgb(128,80,190),20);item.Disposed+=(sender,args)=>{if(item.Image!=null)item.Image.Dispose();};}
         button.Click+=(s,e)=>menu.Show(button,new Point(0,button.Height));button.Disposed+=(s,e)=>menu.Dispose();return button;
     }
     void PrepareVirtualCreate()

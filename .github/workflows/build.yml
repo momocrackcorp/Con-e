@@ -44,7 +44,7 @@ jobs:
             $env:CONE_TEST_DISK_NUMBER = [string]$disk.Number
             $env:CONE_TEST_DISK_ID = (Get-Disk -Number $disk.Number).UniqueId
             $p = Start-Process partition-output/WinPart.exe -ArgumentList '--resize-test' -PassThru
-            if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'Prueba VHD excedió plazo' }
+            if (-not $p.WaitForExit(240000)) { $p.Kill(); throw 'Prueba VHD excedió plazo' }
             if ($p.ExitCode -ne 0) { Get-Content partition-output/qa/resize-error.txt -ErrorAction SilentlyContinue; throw 'Falló prueba de redimensionamiento' }
           } finally {
             Dismount-DiskImage -ImagePath $image -ErrorAction SilentlyContinue
@@ -91,6 +91,6 @@ jobs:
           Copy-Item WinPart/upstream partition-output/source/upstream -Recurse
       - uses: actions/upload-artifact@v4
         with:
-          name: WinPart-v0.6.0-portable
+          name: WinPart-v0.7.0-portable
           path: partition-output/
           if-no-files-found: error

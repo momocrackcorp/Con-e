@@ -52,9 +52,10 @@ internal sealed partial class MainForm
         using(var partition=CurrentPartition(disk,part))
         {
             partition.Get();if(Convert.ToBoolean(partition["IsBoot"])||Convert.ToBoolean(partition["IsSystem"]))throw new InvalidOperationException("Partición crítica protegida.");
+            if(IsPathOnPartition(partition,Environment.SystemDirectory)||IsPathOnPartition(partition,Application.ExecutablePath))throw new InvalidOperationException("El volumen contiene Windows o la aplicación en ejecución.");
             string letter=Convert.ToString(partition["DriveLetter"]).Trim('\0',' ');if(letter!=part.Letter)throw new InvalidOperationException("Cambió la letra del volumen. Actualiza el mapa.");
             using(var pages=new ManagementObjectSearcher("SELECT Name FROM Win32_PageFileUsage"))
-            using(var rows=pages.Get())foreach(ManagementObject row in rows)using(row)if(Value(row,"Name").StartsWith(part.Letter+":",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("El volumen contiene un archivo de paginación activo.");
+            using(var rows=pages.Get())foreach(ManagementObject row in rows)using(row)if(IsPathOnPartition(partition,Value(row,"Name")))throw new InvalidOperationException("El volumen contiene un archivo de paginación activo.");
             using(var volumes=partition.GetRelated("MSFT_Volume"))
             {
                 if(volumes.Count!=1)throw new InvalidOperationException("No se pudo identificar un único volumen asociado.");

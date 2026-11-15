@@ -119,6 +119,7 @@ internal sealed partial class MainForm
             if(File.ReadAllText(originalFile)!=content)throw new Exception("Cambió el contenido de la partición existente");
             bool staleRejected=false;try{ValidateCreate(change);}catch{staleRejected=true;}if(!staleRejected)throw new Exception("Acepta intervalo obsoleto tras crear");
         }
+        DeletePartitionIntegrationTest(imagePath,originalFile);
         File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qa","create-ok.txt"),"OK: creación NTFS, FAT32, exFAT y RAW en intervalos libres de VHD; identidad/offset/tamaño; letra y etiqueta; escritura; contenido original conservado; rechazo de intervalo obsoleto.");
     }
 }

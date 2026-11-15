@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net48</TargetFramework><UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>WinPart</AssemblyName><Version>0.6.0</Version><LangVersion>latest</LangVersion>
+    <AssemblyName>WinPart</AssemblyName><Version>0.7.0</Version><LangVersion>latest</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget><Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup><Reference Include="System.Management" /><Reference Include="System.Xml.Linq" /></ItemGroup>

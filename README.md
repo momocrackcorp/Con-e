@@ -4,7 +4,7 @@ El gestor de particiones se ha extraído a [WinPart](WinPart/README.md), un proy
 
 ## Compilación y descargas
 
-GitHub Actions genera dos paquetes separados: Con-E-v0.14.0-portable y WinPart-v0.8.0-portable. Requieren .NET Framework 4.8 en Windows. Con-E no necesita WinPart para ejecutarse.
+GitHub Actions genera dos paquetes separados: Con-E-v0.14.0-portable y WinPart-v0.8.0-portable. Con-E 0.14 requiere Windows de 64 bits y .NET Framework 4.8; WinPart conserva sus requisitos anteriores. Con-E no necesita WinPart para ejecutarse.
 
 El historial de cambios anterior se conserva en Git. El código extraído está en WinPart/src y sus pruebas de reducción/ampliación se ejecutan sólo sobre un VHD desechable del runner. Con-E mantiene sus pruebas de interfaz y datos simulados. WinPart tiene su propia entrada de aplicación y proyecto, sin compilar los archivos de Con-E.
 
@@ -58,3 +58,5 @@ Los datos SMART pertenecen al dispositivo físico, no a cada partición. Se asoc
 Se mantienen el tema claro, las consultas de CPU/WMI en segundo plano y el análisis de carpetas a petición. Este módulo no modifica particiones ni escribe valores de control en sensores o ventiladores. Los gráficos de pruebas usan datos simulados. Las pruebas de CI verifican lectura IPC real, interfaz y extremos; el runner no permite comprobar la compatibilidad de cada sensor físico ni el diálogo UAC interactivo.
 
 Dependencias y licencias en THIRD_PARTY_NOTICES.md y Licenses/. Extrae el paquete completo: el ejecutable necesita sus DLL acompañantes.
+
+El paquete de sensores 0.14 selecciona las bibliotecas nativas win-x64 de NuGet. No es una compilación para Windows x86 ni ARM64 nativo.

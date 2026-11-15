@@ -273,8 +273,8 @@ internal sealed partial class MainForm
             form.current = new Snapshot { Manufacturer = "HP", Model = "Modelo de prueba", RamTotalGiB = 16, RamAvailableGiB = 9.6, PnpReadComplete = true };
             foreach (var pair in new[] {
                 new[] { "Fabricante del equipo", "HP" }, new[] { "Marca del procesador", "INTEL" }, new[] { "Modelo del equipo", "Computador de prueba con nombre extenso para comprobar ajuste de líneas" },
-                new[] { "Serie del equipo (SMBIOS)", "PRUEBA123456" }, new[] { "Nombre del equipo", "MI-PC" }, new[] { "Procesador", "Intel Core i5 · procesador de prueba" },
-                new[] { "Núcleos / procesadores lógicos", "4 / 8" }, new[] { "Memoria RAM instalada", "16 GB" }, new[] { "Windows", "Windows 11 Pro" },
+                new[] { "Serie del equipo (SMBIOS)", "PRUEBA123456" }, new[] { "Nombre del equipo", "MI-PC" }, new[] { "Procesador", "Intel Core i7-12700 (simulado)" },
+                new[] { "Núcleos / procesadores lógicos", "12 / 20" }, new[] { "Memoria RAM instalada", "16 GB" }, new[] { "Windows", "Windows 11 Pro" },
                 new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
             var module=new HardwareItem {Name="DIMM1",Category="Memoria RAM"};module.Properties["Capacidad (bytes)"]="17179869184";module.Properties["Tipo SMBIOS (código)"]="26";module.Properties["Velocidad configurada (MHz)"]="3200";module.Properties["Fabricante"]="Samsung";module.Properties["Número de pieza"]="PIEZA-PRUEBA";
             form.current.RamSlots.Add(new RamSlot {Name="DIMM1",State="Ocupada · módulo detectado",Module=module});form.current.RamSlots.Add(new RamSlot {Name="DIMM2",State="Libre según SMBIOS"});

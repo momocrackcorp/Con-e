@@ -96,10 +96,10 @@ internal sealed partial class MainForm
                 var group=new TableLayoutPanel { ColumnCount=1,RowCount=3,Width=Math.Max(240,diskMaps.ClientSize.Width-60),AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,BackColor=Color.White,Margin=new Padding(0,0,0,16),Padding=new Padding(12),Font=Font };
                 group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
                 group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-                group.RowStyles.Add(new RowStyle(SizeType.Absolute,Math.Max(64,lineHeight*3)));
+                group.RowStyles.Add(new RowStyle(SizeType.Absolute,Math.Max(90,lineHeight*4+12)));
                 var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var segments=disk.Segments();
-                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(64,lineHeight*3), Margin=new Padding(0,8,0,8) };
+                var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(90,lineHeight*4+12), Margin=new Padding(0,8,0,8) };
                 var list=MakeList(new[]{"Partición","Sistema de archivos","Montaje","Etiqueta","Tamaño","Usado","Libre","Indicadores"});list.Name="partition-list";
                 var swatches=new ImageList {ImageSize=new Size(16,16),ColorDepth=ColorDepth.Depth32Bit};var swatchSources=new List<Bitmap>();list.SmallImageList=swatches;list.Disposed+=(sender,args)=>{swatches.Dispose();foreach(var image in swatchSources)image.Dispose();};list.MultiSelect=false;list.Font=Font;list.GridLines=false;list.ShowItemToolTips=true;
                 int[] widths={220,160,90,110,110,110,110,170};for(int c=0;c<widths.Length;c++)list.Columns[c].Width=(int)(widths[c]*DeviceDpi/96f);
@@ -239,7 +239,7 @@ internal sealed class PartitionStrip : Control
                     using(var usedBrush=new SolidBrush(FileSystemPalette.Used))e.Graphics.FillRectangle(usedBrush,inner.X,inner.Y,used,inner.Height);
                 }
                 else if(!p.Gap)using(var unknown=new System.Drawing.Drawing2D.HatchBrush(System.Drawing.Drawing2D.HatchStyle.LightDownwardDiagonal,Color.LightGray,Color.White))e.Graphics.FillRectangle(unknown,inner);
-                if(inner.Width>65)TextRenderer.DrawText(e.Graphics,(p.Letter.Length>0?p.Letter+":":"Part. "+p.Number)+" · "+(p.Gap?"Sin asignar":p.FileSystem)+Environment.NewLine+MainForm.MapSpace(p.Size),Font,inner,Color.FromArgb(25,35,45),TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);
+                if(inner.Width>65)TextRenderer.DrawText(e.Graphics,(p.Gap?"Sin asignar":(p.Letter.Length>0?p.Letter+":":"Part. "+p.Number)+" · "+p.FileSystem)+Environment.NewLine+MainForm.MapSpace(p.Size),Font,inner,Color.FromArgb(25,35,45),TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
             }
             if(ReferenceEquals(p,Selection))using(var selected=new Pen(Color.FromArgb(230,120,30),3))e.Graphics.DrawRectangle(selected,Rectangle.Inflate(box,-2,-2));
             else using(var separator=new Pen(Color.White,2))e.Graphics.DrawRectangle(separator,box);

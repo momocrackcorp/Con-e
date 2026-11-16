@@ -18,6 +18,15 @@ internal sealed class DiskLayout
     public bool Complete;
     public string ReadNote="";
     public PhysicalDiskInfo Info;
+    public string Artwork
+    {
+        get
+        {
+            if(Info!=null)return Info.Art;
+            var display=new PhysicalDiskInfo {Number=Number,Model=Name??"",BusType=BusType};
+            DiskMediumDetection.Resolve(display);return display.Art;
+        }
+    }
     public readonly List<PartitionLayout> Partitions = new List<PartitionLayout>();
     public List<PartitionLayout> Segments()
     {
@@ -104,7 +113,7 @@ internal sealed partial class MainForm
                 var heading=new Label { Text="Disco "+disk.Number+" · "+disk.Name+" · "+Space(disk.Size)+" · "+disk.Style+" · "+CommandIcons.DiskKind(disk)+(disk.ReadNote.Length>0 ? Environment.NewLine+disk.ReadNote : ""), Dock=DockStyle.Top, AutoSize=true, MaximumSize=new Size(group.Width-30,0) };
                 var headingRow=new TableLayoutPanel {ColumnCount=2,RowCount=1,Dock=DockStyle.Top,AutoSize=true,Margin=Padding.Empty};
                 int headingSize=(int)(76*DeviceDpi/96f);headingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,headingSize+8));headingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-                var headingIcon=new PictureBox {Image=DiskMiniature.Make(disk.Info?.Art??(disk.BusType==15||disk.BusType==14?"virtual":"generic"),headingSize),Size=new Size(headingSize,headingSize),SizeMode=PictureBoxSizeMode.CenterImage,Margin=Padding.Empty};headingIcon.Disposed+=(s,e)=>headingIcon.Image.Dispose();headingRow.Controls.Add(headingIcon,0,0);headingRow.Controls.Add(heading,1,0);heading.Click+=(s,e)=>SelectDisk(disk);headingIcon.Click+=(s,e)=>SelectDisk(disk);
+                var headingIcon=new PictureBox {Image=DiskMiniature.Make(disk.Artwork,headingSize),Size=new Size(headingSize,headingSize),SizeMode=PictureBoxSizeMode.CenterImage,Margin=Padding.Empty};headingIcon.Disposed+=(s,e)=>headingIcon.Image.Dispose();headingRow.Controls.Add(headingIcon,0,0);headingRow.Controls.Add(heading,1,0);heading.Click+=(s,e)=>SelectDisk(disk);headingIcon.Click+=(s,e)=>SelectDisk(disk);
                 var segments=disk.Segments();
                 var map=new PartitionStrip(disk,segments) { Dock=DockStyle.Fill, Height=Math.Max(90,lineHeight*4+12), Margin=new Padding(0,8,0,8),IsDeleting=p=>pendingResizes.Any(q=>q.Delete&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap) };
                 var list=MakeList(new[]{"Partición","Sistema de archivos","Montaje","Etiqueta","Tamaño","Usado","Libre","Indicadores"});list.Name="partition-list";

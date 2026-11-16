@@ -28,11 +28,9 @@ internal sealed partial class MainForm
         {
             var d=disk;var card=(ModernCardPanel)Card("","Disco "+d.Number+" · "+d.Kind);result.Add(card);
             var cardHeader=card.Controls.OfType<FlowLayoutPanel>().First();foreach(var icon in cardHeader.Controls.OfType<ComponentPicture>().ToArray()){cardHeader.Controls.Remove(icon);icon.Dispose();}
-            card.Controls.Add(new DiskMiniature {Kind=d.Art,Width=170,Height=128,Margin=new Padding(0,0,0,8),AccessibleName=d.Kind+" · miniatura ilustrativa"});
-            Line(card,d.Model,true);Line(card,"Total: "+DiskDisplaySize.Format(d.Size),true);
-            card.Controls.Add(new PartitionOverview(d) {Width=260,Margin=new Padding(0,0,0,8)});
             Action open=()=>{selectedPhysicalKey=d.Key;ActivateCard(card);OpenPhysicalStorage(d);};
-            card.Controls.Add(ActionButton("Ver disco y volúmenes",open));WireDiskOpen(card,open);
+            var openButton=ActionButton("Ver disco y volúmenes",open);openButton.Margin=new Padding(0,0,0,2);cardHeader.Controls.Add(openButton);
+            card.Controls.Add(new DiskSummaryPanel(d,Font) {Width=420,Margin=Padding.Empty});WireDiskOpen(card,open);
             card.Selected=d.Key==selectedPhysicalKey;
             Help(card,"Miniatura orientativa; NVMe se representa con una placa ilustrativa, sin confirmar M.2. El modelo y la conexión no prueban el formato físico. El detalle conserva particiones sin letra y no modifica el disco.");
         }

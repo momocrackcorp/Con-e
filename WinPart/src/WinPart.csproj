@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net48</TargetFramework><UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon Condition="Exists('app.ico')">app.ico</ApplicationIcon>
-    <AssemblyName>WinPart</AssemblyName><Version>0.9.1</Version><LangVersion>latest</LangVersion>
+    <AssemblyName>WinPart</AssemblyName><Version>0.9.2</Version><LangVersion>latest</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget><Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup><Reference Include="System.Management" /><Reference Include="System.Xml.Linq" /></ItemGroup>

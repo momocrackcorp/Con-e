@@ -113,3 +113,32 @@ internal sealed class WindowsVersionLogo : Control
         }
     }
 }
+
+internal sealed class DiskSummaryPanel : Panel
+{
+    readonly DiskMiniature icon;
+    readonly Label model,total;
+    readonly PartitionOverview chart;
+    bool fitting;
+    internal DiskSummaryPanel(PhysicalDiskInfo disk,Font font)
+    {
+        Font=font;icon=new DiskMiniature {Kind=disk.Art,AccessibleName=disk.Kind+" · miniatura ilustrativa"};
+        model=new Label {Text=disk.Model,AutoSize=true,UseMnemonic=false,ForeColor=ModernTheme.Text,Font=new Font(font.FontFamily,12,FontStyle.Bold)};
+        total=new Label {Text="Total: "+DiskDisplaySize.Format(disk.Size),AutoSize=true,ForeColor=ModernTheme.Text,Font=new Font(font.FontFamily,12,FontStyle.Bold)};
+        chart=new PartitionOverview(disk){Font=font};Controls.AddRange(new Control[]{icon,model,total,chart});Resize+=(s,e)=>Fit();Fit();
+    }
+    void Fit()
+    {
+        if(fitting)return;fitting=true;
+        try
+        {
+            int gap=14,left=Math.Max(95,(int)(Width*0.40)),right=Math.Max(100,Width-left-gap);
+            icon.Bounds=new Rectangle(0,0,Math.Min(150,left),112);
+            model.MaximumSize=new Size(left,0);model.Size=model.GetPreferredSize(new Size(left,0));model.Location=new Point(0,122);
+            total.MaximumSize=new Size(left,0);total.Size=total.GetPreferredSize(new Size(left,0));total.Location=new Point(0,model.Bottom+10);
+            chart.Location=new Point(left+gap,0);chart.Width=right;
+            Height=Math.Max(total.Bottom,chart.Bottom)+4;
+        }
+        finally{fitting=false;}
+    }
+}

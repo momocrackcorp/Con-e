@@ -34,7 +34,7 @@ internal sealed partial class MainForm
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.2", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -250,8 +250,9 @@ internal sealed partial class MainForm
             int width = Math.Max(180, usable / columns - 14);
             foreach (var card in cards)
             {
-                card.MinimumSize = new Size(width, new[]{"Procesador","Memoria RAM","Memoria de video"}.Contains(Convert.ToString(card.Tag))?(int)(430*scale):0); card.MaximumSize = new Size(width, 0); card.Width = width;
-                int inner = Math.Max(80, width - card.Padding.Horizontal);
+                int cardWidth=Convert.ToString(card.Tag).StartsWith("Disco ")?Math.Max(180,usable/(usable>=800*scale?2:1)-14):width;
+                card.MinimumSize = new Size(cardWidth, new[]{"Procesador","Memoria RAM","Memoria de video"}.Contains(Convert.ToString(card.Tag))?(int)(430*scale):0); card.MaximumSize = new Size(cardWidth, 0); card.Width = cardWidth;
+                int inner = Math.Max(80, cardWidth - card.Padding.Horizontal);
                 foreach (Control child in card.Controls)
                 {
                     if (child is Label) child.MaximumSize = new Size(inner, 0);
@@ -259,6 +260,7 @@ internal sealed partial class MainForm
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
+                    else if(child is DiskSummaryPanel) child.Width=inner;
                     else if(child is PartitionOverview) child.Width=inner;
                     else if(child is FlowLayoutPanel)
                     {child.MinimumSize=new Size(inner,0);child.MaximumSize=new Size(inner,0);foreach(Control nested in child.Controls){if(nested is Label||nested is Button)nested.MaximumSize=new Size(Math.Max(60,inner-child.Padding.Horizontal),0);}}
@@ -332,6 +334,12 @@ internal sealed partial class MainForm
                 form.Width = width; form.ResizeCards(); Application.DoEvents();
                 foreach (var card in form.cards)
                 {
+                    foreach(var summary in card.Controls.OfType<DiskSummaryPanel>())
+                    {
+                        var chart=summary.Controls.OfType<PartitionOverview>().Single();
+                        foreach(Control child in summary.Controls)if(child!=chart&&child.Bounds.IntersectsWith(chart.Bounds))throw new Exception("Distribución del disco solapada");
+                        if(chart.Right>summary.Width||summary.Height>Math.Max(230,chart.Height+10))throw new Exception("Tarjeta de disco demasiado larga o fuera del ancho");
+                    }
                     foreach(var heading in card.Controls.OfType<CardHeadingPanel>())
                     {
                         var toggle=heading.Controls.OfType<Button>().FirstOrDefault();

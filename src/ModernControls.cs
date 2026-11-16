@@ -53,8 +53,11 @@ namespace UIModernization
             base.WndProc(ref m);
             if((m.Msg==0x000F||m.Msg==0x0317||m.Msg==0x0318)&&IsHandleCreated&&SelectedIndex>=0)
             {
-                using(var g=(m.Msg==0x000F?Graphics.FromHwnd(Handle):Graphics.FromHdc(m.WParam)))using(var pen=new Pen(Color.Black,2))
-                {var frame=DisplayRectangle;frame.Inflate(2,2);g.DrawRectangle(pen,frame);}
+                using(var g=(m.Msg==0x000F?Graphics.FromHwnd(Handle):Graphics.FromHdc(m.WParam)))using(var pen=new Pen(Color.Black,1))
+                {
+                    int y=DisplayRectangle.Top-3;g.DrawLine(pen,0,y,ClientSize.Width,y);
+                    var tab=GetTabRect(SelectedIndex);using(var active=new SolidBrush(Color.Black))g.FillRectangle(active,tab.Left,y-3,tab.Width,4);
+                }
             }
         }
         protected override void OnDrawItem(DrawItemEventArgs e)

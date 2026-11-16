@@ -1,17 +1,17 @@
-## Con-E 0.16.1 · diseño claro y detalles por tarjeta
+## Con-E 0.16.2 · diseño claro y detalles por tarjeta
 
 - Navegación sobre la barra de acciones, tarjetas con bordes suaves y CPU con barra degradada.
 - Mostrar/ocultar detalles desde el encabezado de cada tarjeta.
 - RAM: anillo ampliado, miniaturas agrupadas y un único control para todas las ranuras; capacidad y uso siempre visibles.
 - GPU separadas con sus fabricantes y capacidades reales; sin inferir salud o tipo de VRAM.
 
-# Con-E v0.16.1 — diagnóstico
+# Con-E v0.16.2 — diagnóstico
 
 El gestor de particiones se ha extraído a [WinPart](WinPart/README.md), un proyecto y ejecutable independientes. Con-E conserva las tarjetas de hardware, inventario de controladores, logos, informes y herramientas. Ya no contiene la pestaña Mapa de discos ni operaciones de modificación de particiones.
 
 ## Compilación y descargas
 
-GitHub Actions genera dos paquetes separados: Con-E-v0.16.1-portable y WinPart-v0.8.0-portable. Con-E 0.14 requiere Windows de 64 bits y .NET Framework 4.8; WinPart conserva sus requisitos anteriores. Con-E no necesita WinPart para ejecutarse.
+GitHub Actions genera dos paquetes separados: Con-E-v0.16.2-portable y WinPart-v0.8.0-portable. Con-E 0.14 requiere Windows de 64 bits y .NET Framework 4.8; WinPart conserva sus requisitos anteriores. Con-E no necesita WinPart para ejecutarse.
 
 El historial de cambios anterior se conserva en Git. El código extraído está en WinPart/src y sus pruebas de reducción/ampliación se ejecutan sólo sobre un VHD desechable del runner. Con-E mantiene sus pruebas de interfaz y datos simulados. WinPart tiene su propia entrada de aplicación y proyecto, sin compilar los archivos de Con-E.
 

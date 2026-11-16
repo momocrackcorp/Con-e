@@ -36,7 +36,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.1";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.2";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -117,8 +117,9 @@ internal sealed partial class MainForm : Form
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"avanzadas-pendiente.png"),ImageFormat.Png);}
             form.discardPending.PerformClick();
             using(var notice=new UsageNotice()){notice.Show();Application.DoEvents();using(var image=new Bitmap(notice.Width,notice.Height)){notice.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"aviso-inicial.png"),ImageFormat.Png);}notice.Close();}
+            if(new DiskLayout {BusType=17,Name="NE-256"}.Artwork!="m2-nvme"||new DiskLayout {BusType=8,Name="WDC WD10EARX-00N0YB0"}.Artwork!="hdd")throw new Exception("Miniatura WinPart no corresponde al dispositivo");
             var sampleKinds=new[]{"hdd","ssd","m2-sata","m2-nvme"};
-            for(int i=0;i<sampleKinds.Length;i++){var sample=new DiskLayout {Number=(uint)(i+10),Name=sampleKinds[i]+" · ejemplo",BusType=(ushort)(i==3?17:11),UniqueId="ART-"+i,Style="GPT",Complete=true,Size=240UL*1073741824,Info=new PhysicalDiskInfo {Number=(uint)(i+10),Model=i>1?"M.2 · ejemplo":"Ejemplo",MediaType=(uint)(i==0?3:4),BusType=(ushort)(i==3?17:11)}};sample.Partitions.Add(new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,FileSystem=i==0?"NTFS":i==1?"exFAT":i==2?"FAT32":"NTFS",Type="Datos básicos"});form.diskLayouts.Add(sample);}
+            for(int i=0;i<sampleKinds.Length;i++){var sample=new DiskLayout {Number=(uint)(i+10),Name=sampleKinds[i]+" · ejemplo",BusType=(ushort)(i==3?17:11),UniqueId="ART-"+i,Style="GPT",Complete=true,Size=240UL*1073741824,Info=new PhysicalDiskInfo {Number=(uint)(i+10),Model=i==3?"NE-256":i==2?"M.2 SATA · ejemplo":"Ejemplo",MediaType=(uint)(i==0?3:4),BusType=(ushort)(i==3?17:11)}};sample.Partitions.Add(new PartitionLayout {Number=1,Offset=1048576,Size=200UL*1073741824,FileSystem=i==0?"NTFS":i==1?"exFAT":i==2?"FAT32":"NTFS",Type="Datos básicos"});form.diskLayouts.Add(sample);}
             form.RenderDiskMaps();form.SelectDisk(form.diskLayouts.First(d=>d.Number==10));form.diskMaps.ScrollControlIntoView(form.diskMaps.Controls.OfType<TableLayoutPanel>().First(g=>((DiskLayout)g.Tag).Number==10));Application.DoEvents();
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"miniaturas-discos.png"),ImageFormat.Png);}
             foreach(string kind in sampleKinds)using(var icon=DiskMiniature.Make(kind,64)){if(icon.GetPixel(0,0).A!=0)throw new Exception("Miniatura sin transparencia");}

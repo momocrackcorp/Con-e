@@ -54,7 +54,7 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.16.3";
+        Text = "Con-E · Diagnóstico y herramientas · v0.16.4";
         Icon=AppVisualIdentity.MainIcon;ShowIcon=true;
         BackColor = CanvasColor;
         Size = new Size(1440, 900); MinimumSize = new Size(650, 480);
@@ -133,9 +133,9 @@ internal sealed partial class MainForm : Form
         var raw = obj[key]; var value = raw == null ? "" : Convert.ToString(raw).Trim();
         return string.IsNullOrWhiteSpace(value) ? "No disponible" : value;
     }
-    static string Date(string value)
+    static string Date(string value, bool includeSeconds = false)
     {
-        try { return ManagementDateTimeConverter.ToDateTime(value).ToString("dd-MM-yyyy HH:mm"); }
+        try { return ManagementDateTimeConverter.ToDateTime(value).ToString(includeSeconds ? "dd-MM-yyyy HH:mm:ss" : "dd-MM-yyyy HH:mm"); }
         catch { return "No disponible"; }
     }
     static void Query(Snapshot data, string label, string query, Action<ManagementBaseObject> accept)
@@ -164,12 +164,14 @@ internal sealed partial class MainForm : Form
             data.RamTotalGiB = double.TryParse(Value(o, "TotalPhysicalMemory"), out bytes) && bytes > 0 ? (double?)(bytes / 1073741824d) : null;
             add("Tipo de sistema", Value(o, "SystemType"));
         });
-        Query(data, "Windows", "SELECT Caption,Version,BuildNumber,OSArchitecture,FreePhysicalMemory FROM Win32_OperatingSystem", o =>
+        Query(data, "Windows", "SELECT Caption,Version,BuildNumber,OSArchitecture,FreePhysicalMemory,InstallDate,LastBootUpTime FROM Win32_OperatingSystem", o =>
         {
             add("Windows", Value(o, "Caption")); add("Versión / compilación", Value(o, "Version") + " / " + Value(o, "BuildNumber"));
             double freeKiB; if (double.TryParse(Value(o, "FreePhysicalMemory"), out freeKiB) && freeKiB >= 0) data.RamAvailableGiB = freeKiB / 1048576d;
             add("RAM disponible al consultar", data.RamAvailableGiB.HasValue ? data.RamAvailableGiB.Value.ToString("0.##") + " GiB" : "No disponible");
             add("Arquitectura de Windows", Value(o, "OSArchitecture"));
+            add("Instalación de Windows", Date(Value(o, "InstallDate"), true));
+            add("Último arranque del sistema", Date(Value(o, "LastBootUpTime"), true));
         });
         Query(data, "Procesador", "SELECT Name,NumberOfCores,NumberOfLogicalProcessors FROM Win32_Processor", o =>
         { add("Procesador", Value(o, "Name")); add("Núcleos / procesadores lógicos", Value(o, "NumberOfCores") + " / " + Value(o, "NumberOfLogicalProcessors")); });
@@ -215,7 +217,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.16.3\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.16.4\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

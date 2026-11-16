@@ -34,7 +34,7 @@ internal sealed partial class MainForm
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.3", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.4", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -209,6 +209,8 @@ internal sealed partial class MainForm
 
             var account = Card("", "Usuario");
             Line(account, Environment.UserDomainName + "\\" + Environment.UserName, true);
+            Line(account, "Instalación de Windows: " + Read("Instalación de Windows"));
+            Line(account, "Último arranque del sistema: " + Read("Último arranque del sistema"));
             Line(account, "Contraseña: Windows no la proporciona en texto legible.");
 
             // A–H: equipo queda al final del resumen, detrás de las ocho categorías.
@@ -284,7 +286,7 @@ internal sealed partial class MainForm
                 new[] { "Fabricante del equipo", "HP" }, new[] { "Marca del procesador", "INTEL" }, new[] { "Modelo del equipo", "Computador de prueba con nombre extenso para comprobar ajuste de líneas" },
                 new[] { "Serie del equipo (SMBIOS)", "PRUEBA123456" }, new[] { "Nombre del equipo", "MI-PC" }, new[] { "Procesador", "Intel Core i7-12700 (simulado)" },
                 new[] { "Núcleos / procesadores lógicos", "12 / 20" }, new[] { "Memoria RAM instalada", "16 GB" }, new[] { "Windows", "Windows 11 Pro" },
-                new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
+                new[] { "Instalación de Windows", "24-05-2026 03:41:09" }, new[] { "Último arranque del sistema", "16-11-2026 10:06:12" }, new[] { "Arquitectura de Windows", "64 bits" }, new[] { "Versión de BIOS", "1.20" }, new[] { "Fabricante de BIOS", "Fabricante de prueba" }, new[] { "Fecha de BIOS", "10-03-2025" } }) form.current.Summary.Add(pair);
             var module=new HardwareItem {Name="DIMM1",Category="Memoria RAM"};module.Properties["Capacidad (bytes)"]="17179869184";module.Properties["Tipo SMBIOS (código)"]="26";module.Properties["Velocidad configurada (MHz)"]="3200";module.Properties["Fabricante"]="Samsung";module.Properties["Número de pieza"]="PIEZA-PRUEBA";
             form.current.RamSlots.Add(new RamSlot {Name="DIMM1",State="Ocupada · módulo detectado",Module=module});form.current.RamSlots.Add(new RamSlot {Name="DIMM2",State="Libre según SMBIOS"});
             var raw=new System.Collections.Generic.List<byte>();foreach(ushort size in new ushort[]{16384,0}){var entry=new byte[21];entry[0]=17;entry[1]=21;entry[12]=(byte)size;entry[13]=(byte)(size>>8);entry[16]=1;raw.AddRange(entry);raw.AddRange(System.Text.Encoding.ASCII.GetBytes(size==0?"DIMM2":"DIMM1"));raw.Add(0);raw.Add(0);}

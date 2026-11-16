@@ -45,8 +45,10 @@ internal sealed partial class MainForm
         })));
         string cpu = string.Join(" ",data.Summary.Where(r=>r[0]=="Procesador").Select(r=>r[1])).ToUpperInvariant();
         add("Marca del procesador", cpu.Contains("INTEL") ? "INTEL" : cpu.Contains("AMD") ? "AMD" : cpu.Contains("ARM") || cpu.Contains("QUALCOMM") ? "ARM" : "Fabricante no identificado");
-        add("Memoria gráfica DXGI",VideoMemory.Read());
+        string dxgiIssue;data.VideoAdapters.AddRange(VideoMemory.ReadAdapters(out dxgiIssue));
+        add("Memoria gráfica DXGI",VideoMemory.Format(data.VideoAdapters,dxgiIssue));
         var graphics = data.Hardware.Where(h=>h.Category=="Gráficos y monitores" && h.Properties.ContainsKey("Procesador gráfico informado")).ToArray();
+        if(!data.VideoAdapters.Any(a=>!a.IsSoftware))foreach(var h in graphics)data.VideoAdapters.Add(new VideoAdapterInfo {Name=h.Name,Source="WMI",Vendor=VideoMemory.VendorFromPnp(h.DeviceId+" "+h.SearchId+" "+string.Join(" ",h.Properties.Values))});
         add("Adaptadores gráficos",string.Join(Environment.NewLine,graphics.Select(h=>h.Name)));
         add("Información gráfica",string.Join(Environment.NewLine,graphics.Select(h=>string.Join(Environment.NewLine,h.Properties.Where(p=>p.Key!="ID de instancia").Select(p=>p.Key+": "+p.Value)))));
         var networks=data.Hardware.Where(h=>h.Category=="Red" && h.Properties.ContainsKey("Adaptador físico según Windows") && h.Properties["Adaptador físico según Windows"].Equals("True",StringComparison.OrdinalIgnoreCase)).ToArray();

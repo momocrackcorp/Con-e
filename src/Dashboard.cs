@@ -32,8 +32,9 @@ internal sealed partial class MainForm
     {
         var header = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, BackColor = ModernTheme.Surface, Padding = new Padding(20, 12, 20, 12) };
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
+        var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.2", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -49,16 +50,15 @@ internal sealed partial class MainForm
         }));
         panel.Controls.Add(ActionButton("Guardar informe del equipo", Export));
         panel.Controls.Add(ActionButton("Consultar aplicaciones actualizables (WinGet)", () => OpenWinget(false)));
-        panel.Controls.Add(ActionButton("Actualizar aplicaciones con WinGet", () => OpenWinget(true)));
+        panel.Controls.Add(ActionButton("Actualizar aplicaciones (administrador)", () => OpenWinget(true)));
         panel.Controls.Add(ActionButton("Controladores: abrir Windows Update", () => Open("ms-settings:windowsupdate-optionalupdates")));
         panel.Controls.Add(new Label { Text = "WinGet actualiza aplicaciones. Los controladores se revisan mediante Windows Update o el fabricante.", AutoSize = true, MaximumSize = new Size(500, 0) });
         return panel;
     }
     void OpenWinget(bool upgrade)
     {
-        string alias = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "winget.exe");
-        if (!File.Exists(alias)) { status.Text = "WinGet no está disponible en este usuario. No se instalará automáticamente."; return; }
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/k winget upgrade" + (upgrade ? " --all" : "")) { UseShellExecute = true });
+        string alias=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Microsoft","WindowsApps","winget.exe");
+        status.Text=WingetCommands.Launch(upgrade,File.Exists(alias));
     }
     void AddBrand(FlowLayoutPanel card, string manufacturer)
     {
@@ -181,12 +181,7 @@ internal sealed partial class MainForm
             Help(ram, "Es la memoria de trabajo de los programas abiertos. Pulsa Actualizar para obtener otra lectura; no es un monitor continuo.");
 
             var video = Card("", "Memoria de video");
-            AddBrand(video, Read("Adaptadores gráficos"));
-            Line(video, Read("Adaptadores gráficos"), true);
-            Line(video, "Integrada / dedicada: pendiente de verificación DXGI");
-            Line(video, Read("Memoria gráfica DXGI"));
-            InlineDetails(video, "Ver datos gráficos", "Información gráfica");
-            Help(video, "DXGI distingue memoria de video y memoria compartida. En una GPU integrada, una reserva dedicada no demuestra que exista VRAM en chips separados.");
+            RenderVideoCard(video);
 
             var diskCards=RenderPhysicalDiskCards();
 
@@ -341,7 +336,7 @@ internal sealed partial class MainForm
             form.hardwareList.Items[0].Selected = true; form.hardwareList.Focus(); Application.DoEvents();
             if (form.selectedHardware != unknown || form.hardwareDetails.Items.Count == 0) throw new InvalidOperationException("Ficha de hardware ausente");
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "hardware-desconocido.png"), ImageFormat.Png); }
-            StorageSmokeTest(form,dir);SensorSmokeTest(form,dir);RamCompactSmokeTest(form,dir);
+            StorageSmokeTest(form,dir);SensorSmokeTest(form,dir);RamCompactSmokeTest(form,dir);GraphicsAndLaunchSmokeTest(form,dir);
             form.tabs.SelectedIndex = 0; form.current = new Snapshot(); form.RenderDashboard(); Application.DoEvents();
             form.Scale(new SizeF(2, 2)); form.ResizeCards(); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "interfaz-escala-doble.png"), ImageFormat.Png); }

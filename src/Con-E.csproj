@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Con-E</AssemblyName>
-    <Version>0.15.1</Version>
+    <Version>0.15.2</Version>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -13,6 +13,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Management" />
@@ -25,4 +26,12 @@
     <Compile Include="../Shared/DiskMiniature.cs" Link="Shared/DiskMiniature.cs" />
     <EmbeddedResource Include="../Shared/disk-miniatures.png" LogicalName="StorageAtlas" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="app.ico" LogicalName="ConE.AppIcon" />
+    <Content Include="app.ico" CopyToOutputDirectory="PreserveNewest" TargetPath="Con-E.ico" />
+    <Content Include="app-icon.png" CopyToOutputDirectory="PreserveNewest" TargetPath="Con-E-icon.png" />
+  </ItemGroup>
+  <Target Name="GenerateConEIcon" BeforeTargets="PrepareForBuild" Inputs="$(MSBuildProjectDirectory)/../build-cone-icon.ps1" Outputs="$(MSBuildProjectDirectory)/app.ico;$(MSBuildProjectDirectory)/app-icon.png">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../build-cone-icon.ps1&quot;" />
+  </Target>
 </Project>

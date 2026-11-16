@@ -1,0 +1,77 @@
+name: Publicar Con-E y WinPart
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-apps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-cone-0166-winpart-094
+  cancel-in-progress: false
+jobs:
+  releases:
+    runs-on: windows-2022
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar origen aprobado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $run = gh run view 43887114999 --json conclusion,headSha | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.conclusion -ne 'success' -or $run.headSha -ne '8311618ba3d66af665461003e2e99132cb7fc606') { throw 'La compilación de origen no coincide o no aprobó' }
+          git diff --exit-code $run.headSha $env:GITHUB_SHA -- src Shared WinPart/src WinPart/build-icon.ps1 build-sensor-dependencies.ps1 build-cone-icon.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Hay cambios de código sin validar respecto a los binarios aprobados' }
+      - name: Descargar los dos paquetes comprobados
+        shell: pwsh
+        run: |
+          gh run download 43887114999 --name Con-E-v0.16.6-portable --dir packages/con-e
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo descargar Con-E' }
+          gh run download 43887114999 --name WinPart-v0.9.4-portable --dir packages/winpart
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo descargar WinPart' }
+      - name: Preparar ZIP y sumas SHA256 independientes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Get-Item packages/con-e/Con-E.exe).VersionInfo.ProductVersion.StartsWith('0.16.6')) { throw 'Versión Con-E incorrecta' }
+          if (-not (Get-Item packages/winpart/WinPart.exe).VersionInfo.ProductVersion.StartsWith('0.9.4')) { throw 'Versión WinPart incorrecta' }
+          Copy-Item README.md packages/con-e/README.md -Force
+          Copy-Item WinPart/README.md packages/winpart/README.md -Force
+          Copy-Item WinPart/README.md packages/winpart/source/WinPart/README.md -Force
+          New-Item dist -ItemType Directory -Force | Out-Null
+          Compress-Archive -Path packages/con-e/* -DestinationPath dist/Con-E-v0.16.6-portable.zip
+          Compress-Archive -Path packages/winpart/* -DestinationPath dist/WinPart-v0.9.4-portable.zip
+          foreach ($app in @(@('Con-E-v0.16.6-portable.zip','SHA256SUMS-Con-E.txt'),@('WinPart-v0.9.4-portable.zip','SHA256SUMS-WinPart.txt'))) {
+            $hash = (Get-FileHash (Join-Path dist $app[0]) -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($app[0])" | Set-Content (Join-Path dist $app[1]) -Encoding ascii
+          }
+      - name: Crear releases separados en borrador y adjuntar paquetes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Stage-Release($tag, $title, $notes, $zip, $checksum) {
+            $state = gh release view $tag --json isDraft --jq .isDraft 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              if ($state -ne 'true') { throw "La release $tag ya está publicada; no se reemplazará" }
+            } else {
+              gh release create $tag --target $env:GITHUB_SHA --title $title --notes-file $notes --draft
+              if ($LASTEXITCODE -ne 0) { throw "No se pudo crear $tag" }
+            }
+            gh release upload $tag $zip $checksum --clobber
+            if ($LASTEXITCODE -ne 0) { throw "No se pudieron adjuntar los archivos de $tag" }
+          }
+          Stage-Release 'con-e-v0.16.6' 'Con-E v0.16.6' '.github/release-notes/con-e-v0.16.6.md' 'dist/Con-E-v0.16.6-portable.zip' 'dist/SHA256SUMS-Con-E.txt'
+          Stage-Release 'winpart-v0.9.4' 'WinPart v0.9.4' '.github/release-notes/winpart-v0.9.4.md' 'dist/WinPart-v0.9.4-portable.zip' 'dist/SHA256SUMS-WinPart.txt'
+      - name: Publicar ambas aplicaciones
+        shell: pwsh
+        run: |
+          gh release edit winpart-v0.9.4 --draft=false --latest=false
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar WinPart' }
+          gh release edit con-e-v0.16.6 --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar Con-E' }

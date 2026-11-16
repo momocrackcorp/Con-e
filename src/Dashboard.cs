@@ -299,6 +299,7 @@ internal sealed partial class MainForm
             form.current.Hardware.Add(unknown);
             form.RenderDashboard(); form.RenderHardwareBrowser(); form.Show(); Application.DoEvents();
             if(!form.tabs.TabPages.Contains(form.sensorPage)||!form.actions.Visible||form.actions.Parent!=form.tabs.SelectedTab||form.dashboard.Top<form.actions.Bottom)throw new InvalidOperationException("Navegación o barra de acciones incorrecta al abrir");
+            foreach(Control action in form.actions.Controls)if(action.Visible&&action.Bottom>form.actions.ClientSize.Height)throw new InvalidOperationException("Acción fuera de la barra");
             int uiThread=System.Threading.Thread.CurrentThread.ManagedThreadId,workerThread=uiThread,activeReads=0,maxReads=0,samples=0;
             var firstCpuCard=form.cards[0];
             form.StartCpuMonitor(()=>{workerThread=System.Threading.Thread.CurrentThread.ManagedThreadId;int active=System.Threading.Interlocked.Increment(ref activeReads);maxReads=Math.Max(maxReads,active);System.Threading.Thread.Sleep(30);System.Threading.Interlocked.Decrement(ref activeReads);System.Threading.Interlocked.Increment(ref samples);return new CpuMetric {Percent=42.5f,Detail="Muestra simulada de prueba"};},20);

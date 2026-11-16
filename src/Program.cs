@@ -80,12 +80,12 @@ internal sealed partial class MainForm : Form
             else MessageBox.Show("No se encontró la carpeta Tools junto a Con-E.exe.");
         });
         Controls.Add(tabs);Controls.Add(status);
-        Action placeActions=()=>{if(tabs.SelectedTab!=null){tabs.SelectedTab.Controls.Add(actions);actions.SendToBack();}};
+        Action placeActions=()=>{if(tabs.SelectedTab!=null){tabs.SelectedTab.Controls.Add(actions);actions.SendToBack();actions.MinimumSize=new Size(0,(int)(64*DeviceDpi/96f));actions.PerformLayout();tabs.SelectedTab.PerformLayout();}};
         tabs.SelectedIndexChanged+=(s,e)=>{placeActions();if(tabs.SelectedTab==sensorPage&&sensorView==null)OpenSensors();};placeActions();
         dashboard.Resize += (s, e) => ResizeCards();
         summary.ShowItemToolTips=true;summary.Resize+=(s,e)=>ResizeSummary();
         RenderDashboard();InitializeModernUI();
-        Shown += async (s, e) => { placeActions(); if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) {StartCpuMonitor();await RefreshData();} };
+        Shown += async (s, e) => { placeActions();BeginInvoke((Action)(()=>{placeActions();actions.Refresh();})); if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) {StartCpuMonitor();await RefreshData();} };
     }
 
     void ResizeSummary()

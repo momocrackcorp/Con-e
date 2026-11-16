@@ -30,11 +30,21 @@ internal sealed partial class MainForm
             var cardHeader=card.Controls.OfType<FlowLayoutPanel>().First();foreach(var icon in cardHeader.Controls.OfType<ComponentPicture>().ToArray()){cardHeader.Controls.Remove(icon);icon.Dispose();}
             card.Controls.Add(new DiskMiniature {Kind=d.Art,Width=170,Height=128,Margin=new Padding(0,0,0,8),AccessibleName=d.Kind+" · miniatura ilustrativa"});
             Line(card,d.Model,true);Line(card,d.Size>0?StorageFormat.Size(d.Size):"Capacidad no disponible",true);Line(card,d.Bus+" · "+d.Style);Line(card,d.Form);
-            var volumes=d.Partitions.Where(p=>p.Letter.Length>0).Select(p=>p.Title).ToArray();Line(card,volumes.Length>0?string.Join(" · ",volumes):d.Partitions.Count+" partición(es) · sin letra de unidad");
+            Line(card,"Volúmenes y particiones",true);
+            foreach(var p in d.Partitions.OrderBy(p=>p.Offset))
+            {
+                Line(card,p.Title+" · "+p.FileSystem,true);
+                ulong total=p.VolumeSize??p.Size;
+                Line(card,"Capacidad: "+StorageFormat.Size(total));
+                if(p.Free.HasValue&&p.Free.Value<=total)
+                    Line(card,"Usado: "+StorageFormat.Size(total-p.Free.Value)+" · Disponible: "+StorageFormat.Size(p.Free.Value));
+                else Line(card,"Uso y espacio disponible: No disponible");
+            }
+            if(d.Partitions.Count==0)Line(card,"Sin volúmenes informados");
             Action open=()=>{selectedPhysicalKey=d.Key;ActivateCard(card);OpenPhysicalStorage(d);};
             card.Controls.Add(ActionButton("Ver disco y volúmenes",open));WireDiskOpen(card,open);
             card.Selected=d.Key==selectedPhysicalKey;
-            Help(card,"Miniatura orientativa. El modelo y la conexión no prueban el formato físico. El detalle conserva particiones sin letra y no modifica el disco.");
+            Help(card,"Miniatura orientativa; NVMe se representa con una placa ilustrativa, sin confirmar M.2. El modelo y la conexión no prueban el formato físico. El detalle conserva particiones sin letra y no modifica el disco.");
         }
         return result;
     }

@@ -26,7 +26,7 @@ namespace UIModernization
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             e.Graphics.Clear(Parent==null?ModernTheme.Canvas:Parent.BackColor);if(Width<2||Height<2)return;e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;
-            using(var path=ModernTheme.Rounded(new RectangleF(1,1,Width-2,Height-2),BorderRadius*DeviceDpi/96f))using(var fill=new SolidBrush(CardBackColor))using(var pen=new Pen(Selected?ModernTheme.Accent:BorderColor,Selected?2:1)){e.Graphics.FillPath(fill,path);e.Graphics.DrawPath(pen,path);}
+            using(var path=ModernTheme.Rounded(new RectangleF(1,1,Width-2,Height-2),BorderRadius*DeviceDpi/96f))using(var fill=new SolidBrush(CardBackColor))using(var pen=new Pen(Selected?Color.Black:BorderColor,Selected?2:1)){e.Graphics.FillPath(fill,path);e.Graphics.DrawPath(pen,path);}
         }
     }
     public class ModernProgressBar : Control
@@ -52,7 +52,7 @@ namespace UIModernization
         {
             var box=GetTabRect(e.Index);using(var brush=new SolidBrush(ModernTheme.Surface))e.Graphics.FillRectangle(brush,box);
             TextRenderer.DrawText(e.Graphics,TabPages[e.Index].Text,Font,box,e.Index==SelectedIndex?ModernTheme.Text:ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
-            if(e.Index==SelectedIndex)using(var pen=new Pen(ModernTheme.Accent,3))e.Graphics.DrawLine(pen,box.Left+8,box.Bottom-3,box.Right-8,box.Bottom-3);
+            if(e.Index==SelectedIndex)using(var pen=new Pen(Color.Black,2)){var border=box;border.Inflate(-1,-1);e.Graphics.DrawRectangle(pen,border);}
         }
     }
 }

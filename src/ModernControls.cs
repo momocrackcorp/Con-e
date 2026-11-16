@@ -45,26 +45,6 @@ namespace UIModernization
             {e.Graphics.FillPath(background,path);var state=e.Graphics.Save();e.Graphics.SetClip(path);if(IsAvailable&&Value>0)using(var brush=new LinearGradientBrush(ClientRectangle,FillColor,Color.FromArgb(91,194,220),LinearGradientMode.Horizontal))e.Graphics.FillRectangle(brush,0,0,Width*Value/100,Height);e.Graphics.Restore(state);}
         }
     }
-    internal sealed class ModernTabControl : TabControl
-    {
-        public ModernTabControl(){DrawMode=TabDrawMode.OwnerDrawFixed;BackColor=ModernTheme.Canvas;}
-        protected override void WndProc(ref Message m)
-        {
-            base.WndProc(ref m);
-            if((m.Msg==0x000F||m.Msg==0x0317||m.Msg==0x0318)&&IsHandleCreated&&SelectedIndex>=0)
-            {
-                using(var g=(m.Msg==0x000F?Graphics.FromHwnd(Handle):Graphics.FromHdc(m.WParam)))using(var pen=new Pen(Color.Black,1))
-                {
-                    int y=DisplayRectangle.Top-3;g.DrawLine(pen,0,y,ClientSize.Width,y);
-                    var tab=GetTabRect(SelectedIndex);using(var active=new SolidBrush(Color.Black))g.FillRectangle(active,tab.Left,y-3,tab.Width,4);
-                }
-            }
-        }
-        protected override void OnDrawItem(DrawItemEventArgs e)
-        {
-            var box=GetTabRect(e.Index);using(var brush=new SolidBrush(ModernTheme.Surface))e.Graphics.FillRectangle(brush,box);
-            TextRenderer.DrawText(e.Graphics,TabPages[e.Index].Text,Font,box,e.Index==SelectedIndex?ModernTheme.Text:ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
-            
-        }
-    }
+    // Keep the Windows tab appearance and selection rendering unchanged.
+    internal sealed class ModernTabControl : TabControl { }
 }

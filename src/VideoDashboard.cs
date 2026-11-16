@@ -20,7 +20,7 @@ internal sealed class VideoAdapterPanel : ModernCardPanel
         Add("Memoria compartida informada: "+VideoMemory.MiB(adapter.SharedSystem));
         if(adapter.DedicatedSystem.GetValueOrDefault()>0)Add("Memoria de sistema dedicada: "+VideoMemory.MiB(adapter.DedicatedSystem));
         if(adapter.Source!="DXGI")Add("Identificación WMI · reservas DXGI no disponibles");
-        var extra=new Label {Text="Fuente: "+adapter.Source+" · Fabricante PCI: "+adapter.Vendor.ToString("X4"),AutoSize=true,Visible=false,ForeColor=ModernTheme.Muted,UseMnemonic=false};Controls.Add(extra);
+        var extra=new Label {Text="Fuente: "+adapter.Source+" · Fabricante PCI: "+(adapter.Vendor.HasValue?adapter.Vendor.Value.ToString("X4"):"No disponible"),AutoSize=true,Visible=false,ForeColor=ModernTheme.Muted,UseMnemonic=false};Controls.Add(extra);
         var toggle=new Button {Text="Mostrar detalles ⌄",AutoSize=true,FlatStyle=FlatStyle.Flat,ForeColor=ModernTheme.Accent,BackColor=ModernTheme.Surface,Font=new Font("Segoe UI",9),Margin=new Padding(0,4,0,3)};toggle.FlatAppearance.BorderColor=ModernTheme.Border;
         toggle.Click+=(s,e)=>{extra.Visible=!extra.Visible;toggle.Text=extra.Visible?"Ocultar detalles ⌃":"Mostrar detalles ⌄";};header.Controls.Add(toggle);
         Resize+=(s,e)=>Fit();Fit();AccessibleName=adapter.Name+" · "+(VendorBrand??"Fabricante sin identificar");

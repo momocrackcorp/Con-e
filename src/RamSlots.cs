@@ -72,6 +72,8 @@ internal sealed partial class MainForm
             miniatures.Controls.Add(unit);
         }
         card.Controls.Add(miniatures);
+        var descriptions=current.RamSlots.Where(s=>s.Module!=null).Select(s=>{string type,speed;s.Module.Properties.TryGetValue("Tipo SMBIOS (código)",out type);s.Module.Properties.TryGetValue("Velocidad configurada (MHz)",out speed);return RamType(type??"0")+(string.IsNullOrWhiteSpace(speed)?"":" · "+speed+" MHz");}).Distinct().ToArray();
+        if(descriptions.Length>0)Line(card,current.RamSlots.Count(s=>s.Module!=null)+" módulos · "+string.Join(" / ",descriptions));
         const string key="Detalles de todas las ranuras RAM";
         var grid=new CompactRamGrid {Margin=new Padding(0,3,0,4),Visible=expandedCards.Contains(key)};
         foreach(var slot in current.RamSlots)

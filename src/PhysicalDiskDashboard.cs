@@ -29,18 +29,8 @@ internal sealed partial class MainForm
             var d=disk;var card=(ModernCardPanel)Card("","Disco "+d.Number+" · "+d.Kind);result.Add(card);
             var cardHeader=card.Controls.OfType<FlowLayoutPanel>().First();foreach(var icon in cardHeader.Controls.OfType<ComponentPicture>().ToArray()){cardHeader.Controls.Remove(icon);icon.Dispose();}
             card.Controls.Add(new DiskMiniature {Kind=d.Art,Width=170,Height=128,Margin=new Padding(0,0,0,8),AccessibleName=d.Kind+" · miniatura ilustrativa"});
-            Line(card,d.Model,true);Line(card,d.Size>0?StorageFormat.Size(d.Size):"Capacidad no disponible",true);Line(card,d.Bus+" · "+d.Style);Line(card,d.Form);
-            Line(card,"Volúmenes y particiones",true);
-            foreach(var p in d.Partitions.OrderBy(p=>p.Offset))
-            {
-                Line(card,p.Title+" · "+p.FileSystem,true);
-                ulong total=p.VolumeSize??p.Size;
-                Line(card,"Capacidad: "+StorageFormat.Size(total));
-                if(p.Free.HasValue&&p.Free.Value<=total)
-                    Line(card,"Usado: "+StorageFormat.Size(total-p.Free.Value)+" · Disponible: "+StorageFormat.Size(p.Free.Value));
-                else Line(card,"Uso y espacio disponible: No disponible");
-            }
-            if(d.Partitions.Count==0)Line(card,"Sin volúmenes informados");
+            Line(card,d.Model,true);Line(card,"Total: "+DiskDisplaySize.Format(d.Size),true);
+            card.Controls.Add(new PartitionOverview(d) {Width=260,Margin=new Padding(0,0,0,8)});
             Action open=()=>{selectedPhysicalKey=d.Key;ActivateCard(card);OpenPhysicalStorage(d);};
             card.Controls.Add(ActionButton("Ver disco y volúmenes",open));WireDiskOpen(card,open);
             card.Selected=d.Key==selectedPhysicalKey;

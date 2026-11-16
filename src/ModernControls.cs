@@ -48,11 +48,18 @@ namespace UIModernization
     internal sealed class ModernTabControl : TabControl
     {
         public ModernTabControl(){DrawMode=TabDrawMode.OwnerDrawFixed;BackColor=ModernTheme.Canvas;}
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if(m.Msg==0x000F&&IsHandleCreated&&SelectedIndex>=0)
+                using(var g=Graphics.FromHwnd(Handle))using(var pen=new Pen(Color.Black,2))
+                {var frame=DisplayRectangle;frame.Inflate(2,2);g.DrawRectangle(pen,frame);}
+        }
         protected override void OnDrawItem(DrawItemEventArgs e)
         {
             var box=GetTabRect(e.Index);using(var brush=new SolidBrush(ModernTheme.Surface))e.Graphics.FillRectangle(brush,box);
             TextRenderer.DrawText(e.Graphics,TabPages[e.Index].Text,Font,box,e.Index==SelectedIndex?ModernTheme.Text:ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
-            if(e.Index==SelectedIndex)using(var pen=new Pen(Color.Black,2)){var border=box;border.Inflate(-1,-1);e.Graphics.DrawRectangle(pen,border);}
+            
         }
     }
 }

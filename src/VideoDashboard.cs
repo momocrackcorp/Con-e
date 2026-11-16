@@ -7,7 +7,7 @@ using UIModernization;
 
 internal sealed class VideoAdapterPanel : ModernCardPanel
 {
-    readonly FlowLayoutPanel header=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,Margin=Padding.Empty};
+    readonly FlowLayoutPanel header=new CardHeadingPanel {AutoSize=false,WrapContents=false,Margin=Padding.Empty};
     readonly Label name;
     internal string VendorBrand;
     internal VideoAdapterPanel(VideoAdapterInfo adapter)

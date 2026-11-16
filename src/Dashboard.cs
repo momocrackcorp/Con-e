@@ -34,7 +34,7 @@ internal sealed partial class MainForm
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.1", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -85,7 +85,7 @@ internal sealed partial class MainForm
     {
         var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=ModernTheme.Border,BorderRadius=12,Width=300,Tag=title };
         WireCard(card,card);
-        var header=new FlowLayoutPanel {Name="card-heading",AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,BackColor=ModernTheme.Surface,Margin=new Padding(0,0,0,14)};
+        var header=new CardHeadingPanel {Name="card-heading",AutoSize=false,WrapContents=false,BackColor=ModernTheme.Surface,Margin=new Padding(0,0,0,14)};
         header.Controls.Add(new ComponentPicture {Kind=title=="Almacenamiento"?title+" "+Read("Tipos de almacenamiento"):title,Width=42,Height=42,AccessibleName=title,Margin=new Padding(0,0,8,0)});
         header.Controls.Add(new Label {Text=title,AutoSize=true,Font=new Font(Font.FontFamily,14,FontStyle.Bold),ForeColor=TextColor,Margin=new Padding(0,10,0,0)});
         card.Controls.Add(header);card.Selected=selectedCardTitle==title;cards.Add(card);dashboard.Controls.Add(card);return card;
@@ -194,6 +194,9 @@ internal sealed partial class MainForm
             InlineDetails(network, "Ver características de red", "Características de red");
 
             var windows = Card("⊞", "Windows");
+            var windowsHeader=windows.Controls.OfType<FlowLayoutPanel>().First(h=>h.Name=="card-heading");
+            var oldWindowsIcon=windowsHeader.Controls.OfType<ComponentPicture>().First();windowsHeader.Controls.Remove(oldWindowsIcon);oldWindowsIcon.Dispose();
+            windowsHeader.Controls.Add(new WindowsVersionLogo(Read("Windows")) {Width=42,Height=42,Margin=new Padding(0,0,8,0)});windowsHeader.Controls.SetChildIndex(windowsHeader.Controls.OfType<WindowsVersionLogo>().First(),0);
             Line(windows, Read("Windows"), true); Line(windows, Read("Arquitectura de Windows"));
             InlineDetails(windows, "Ver detalles de Windows", "Versión / compilación", "Tipo de sistema");
             windows.Controls.Add(ActionButton("Mostrar clave OEM disponible", () => RevealOem(windows)));
@@ -256,6 +259,7 @@ internal sealed partial class MainForm
                     else if (child is UsageDial) child.Width = Math.Min(160, inner);
                     else if (child is BrandLogo) child.Width = Math.Min(125, inner);
                     else if (child is Button) child.MaximumSize = new Size(inner, 0);
+                    else if(child is PartitionOverview) child.Width=inner;
                     else if(child is FlowLayoutPanel)
                     {child.MinimumSize=new Size(inner,0);child.MaximumSize=new Size(inner,0);foreach(Control nested in child.Controls){if(nested is Label||nested is Button)nested.MaximumSize=new Size(Math.Max(60,inner-child.Padding.Horizontal),0);}}
                 }
@@ -328,6 +332,15 @@ internal sealed partial class MainForm
                 form.Width = width; form.ResizeCards(); Application.DoEvents();
                 foreach (var card in form.cards)
                 {
+                    foreach(var heading in card.Controls.OfType<CardHeadingPanel>())
+                    {
+                        var toggle=heading.Controls.OfType<Button>().FirstOrDefault();
+                        if(toggle!=null)
+                        {
+                            if(Math.Abs(toggle.Right-heading.ClientSize.Width)>3)throw new Exception("Botón de detalles no está al borde derecho");
+                            foreach(Control other in heading.Controls)if(other!=toggle&&other.Visible&&other.Bounds.IntersectsWith(toggle.Bounds))throw new Exception("Detalles tapa título o logo");
+                        }
+                    }
                     if (card.Width > form.dashboard.ClientSize.Width) throw new InvalidOperationException("Tarjeta fuera de la ventana");
                     foreach (Control child in card.Controls) if (child.Visible && child.Right > card.ClientSize.Width) throw new InvalidOperationException("Contenido fuera de la tarjeta");
                 }

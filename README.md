@@ -1,7 +1,7 @@
-# Con‑E v0.16.6
+# Con‑E v0.16.7
 Diagnóstico e inventario del equipo para Windows, con una interfaz gráfica en español.
 
-[**Descargar Con‑E v0.16.6 portátil**](https://github.com/momocrackcorp/Con-e/releases/tag/con-e-v0.16.6) · [Historial de publicaciones](https://github.com/momocrackcorp/Con-e/releases) · [WinPart: gestor de particiones independiente](WinPart/README.md)
+[**Descargar Con‑E v0.16.7 portátil**](https://github.com/momocrackcorp/Con-e/releases/tag/con-e-v0.16.7) · [Historial de publicaciones](https://github.com/momocrackcorp/Con-e/releases) · [WinPart: gestor de particiones independiente](WinPart/README.md)
 
 ## Funciones
 - Tarjetas de procesador, RAM, video, discos físicos, red, Windows, BIOS y usuario.
@@ -20,7 +20,7 @@ Diagnóstico e inventario del equipo para Windows, con una interfaz gráfica en 
 ## Requisitos y uso
 Windows 10/11 de **64 bits** y **.NET Framework 4.8**.
 
-1. Descarga el ZIP de la [release de Con‑E](https://github.com/momocrackcorp/Con-e/releases/tag/con-e-v0.16.6).
+1. Descarga el ZIP de la [release de Con‑E](https://github.com/momocrackcorp/Con-e/releases/tag/con-e-v0.16.7).
 2. Extrae **todo el paquete** a una carpeta.
 3. Abre `Con-E.exe`. Conserva las DLL y las carpetas acompañantes.
 4. Actualiza el inventario con **Actualizar datos**. Para almacenamiento, pulsa **Ver disco y volúmenes** y después **Analizar carpetas**.
@@ -44,3 +44,9 @@ El proyecto apunta a .NET Framework 4.8. El script prepara dependencias y licenc
 
 ## Validación
 La versión publicada procede de una compilación Windows aprobada: interfaz ancha/estrecha y escala doble, CPU asíncrona, RAM, GPU, almacenamiento, cancelación, sensores IPC y estados sin lectura. Las capturas de pruebas utilizan datos simulados. La compatibilidad con sensores físicos y el diálogo UAC dependen del equipo.
+
+## Acerca de Con-E
+
+Desarrollada por **Omar Águila**, en **Laboratorios Momocrackcorp**, en **noviembre de 2026**, **Pueblo Seco, San Ignacio, Ñuble, Chile**.
+
+El nombre hace un guiño a **Coné**, sobrino de **Condorito**, personajes creados por **René Ríos Boettiger, Pepo**. Los derechos sobre los personajes, sus nombres y las ilustraciones pertenecen a sus respectivos titulares. No se afirma afiliación, patrocinio ni una licencia concedida. El crédito de desarrollo corresponde a la aplicación. El panel se abre mediante **Acerca de Con-E**; esta versión incorpora el homenaje escrito y conserva el icono propio de la aplicación.

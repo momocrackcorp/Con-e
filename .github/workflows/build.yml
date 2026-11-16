@@ -43,7 +43,7 @@ jobs:
           Copy-Item Tools/LEEME.txt output/Tools/
       - uses: actions/upload-artifact@v4
         with:
-          name: Con-E-v0.16.6-portable
+          name: Con-E-v0.16.7-portable
           path: output/
           if-no-files-found: error
 
@@ -114,3 +114,34 @@ jobs:
           name: WinPart-v0.9.4-portable
           path: partition-output/
           if-no-files-found: error
+
+  publish-cone:
+    needs: windows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-cone]')
+    runs-on: windows-2022
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Con-E-v0.16.7-portable
+          path: release-payload
+      - name: Empaquetar Con-E v0.16.7
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Get-Item release-payload/Con-E.exe).VersionInfo.ProductVersion.StartsWith('0.16.7')) { throw 'Versión incorrecta' }
+          Copy-Item THIRD_PARTY_NOTICES.md release-payload/THIRD_PARTY_NOTICES.md -Force
+          Compress-Archive -Path release-payload/* -DestinationPath Con-E-v0.16.7-portable.zip
+          $hash=(Get-FileHash Con-E-v0.16.7-portable.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Con-E-v0.16.7-portable.zip" | Set-Content SHA256SUMS-Con-E.txt -Encoding ascii
+      - name: Publicar actualización Con-E
+        shell: pwsh
+        run: |
+          gh release create con-e-v0.16.7 Con-E-v0.16.7-portable.zip SHA256SUMS-Con-E.txt --target $env:GITHUB_SHA --title 'Con-E v0.16.7' --notes-file .github/release-notes/con-e-v0.16.7.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la release' }

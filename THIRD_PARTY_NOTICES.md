@@ -11,3 +11,8 @@ Con-E usa interfaces públicas de estas bibliotecas; no atribuye su código a lo
 * El código fuente del controlador PawnIO se publica bajo GPL-2.0-or-later con excepción de enlace; el instalador oficial firmado se distribuye bajo las condiciones de su autor, que permiten redistribuirlo sin modificaciones. No se atribuye al binario oficial la licencia del árbol de fuentes. Información del autor: https://github.com/namazso/PawnIO.Modules/wiki/Using-PawnIO-Modules y https://pawnio.eu/ .
 
 Inventario y miniaturas compartidos con WinPart: código propio bajo MIT; licencia en Licenses/StorageShared-MIT.txt y procedencia del recurso en Licenses/StorageArtwork.txt.
+
+
+## Referencia cultural en el nombre Con-E
+
+Con-E hace un guiño a Coné, sobrino de Condorito, personajes de la historieta creada por René Ríos Boettiger, Pepo. Los derechos sobre los personajes, sus nombres y las ilustraciones pertenecen a sus respectivos titulares. Esta referencia no implica afiliación, patrocinio, autorización ni concesión de una licencia por parte de esos titulares. El crédito de Omar Águila y Laboratorios Momocrackcorp se refiere al desarrollo de la aplicación, no a esos personajes ni a sus ilustraciones. Esta versión del panel Acerca de contiene un homenaje escrito y el icono propio de la aplicación.

@@ -16,6 +16,7 @@ internal sealed partial class MainForm
         if(WindowsVersionLogo.Detect("Microsoft Windows 10 Pro")!="10"||WindowsVersionLogo.Detect("Windows 11 Pro")!="11"||WindowsVersionLogo.Detect("Windows 12")!="generic"||WindowsVersionLogo.Detect("Windows Server 2025")!="generic")throw new Exception("Logo Windows incorrecto");
         var sampleDisk=new PhysicalDiskInfo {Size=1000000000,Complete=true};sampleDisk.Partitions.Add(new PhysicalPartitionInfo {Size=700000000,Letter="C",FileSystem="NTFS"});
         using(var chart=new PartitionOverview(sampleDisk))if(chart.Slices.Sum(x=>(decimal)x.Bytes)!=sampleDisk.Size||chart.Slices.Count!=2||DiskDisplaySize.Format(1000000000)!="1 GB")throw new Exception("Distribución de particiones incorrecta");
+        PartitionIdentity.Verify();
         var query=WingetCommands.Request(false);var update=WingetCommands.Request(true);
         if(!query.UseShellExecute||query.Verb!="open"||query.Arguments.Contains("--all")||!update.UseShellExecute||update.Verb!="runas"||update.Arguments!="/d /k winget upgrade --all"||!Path.IsPathRooted(update.FileName)||update.WorkingDirectory!=Environment.GetFolderPath(Environment.SpecialFolder.System))throw new Exception("Solicitud de actualización/elevación incorrecta");
         int calls=0;string cancelled=WingetCommands.Launch(true,true,info=>{calls++;throw new Win32Exception(1223);});if(calls!=1||!cancelled.Contains("cancelada"))throw new Exception("No maneja cancelación de UAC");

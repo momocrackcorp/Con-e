@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net48</TargetFramework><UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon Condition="Exists('app.ico')">app.ico</ApplicationIcon>
-    <AssemblyName>WinPart</AssemblyName><Version>0.9.3</Version><LangVersion>latest</LangVersion>
+    <AssemblyName>WinPart</AssemblyName><Version>0.9.4</Version><LangVersion>latest</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget><Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup><Reference Include="System.Management" /><Reference Include="System.Xml.Linq" /></ItemGroup>
@@ -10,6 +10,7 @@
     <Compile Include="../../Shared/DiskMediumDetection.cs" Link="Shared/DiskMediumDetection.cs" />
     <Compile Include="../../Shared/PhysicalStorage.cs" Link="Shared/PhysicalStorage.cs" />
     <Compile Include="../../Shared/DiskMiniature.cs" Link="Shared/DiskMiniature.cs" />
+    <Compile Include="../../Shared/PartitionIdentity.cs" Link="Shared/PartitionIdentity.cs" />
     <EmbeddedResource Include="../../Shared/disk-miniatures.png" LogicalName="StorageAtlas" />
     <EmbeddedResource Include="../../Shared/usb-miniature.png" LogicalName="UsbMiniature" />
   </ItemGroup>

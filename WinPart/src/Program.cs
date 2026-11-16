@@ -36,7 +36,7 @@ internal sealed partial class MainForm : Form
     readonly FlowLayoutPanel actions=new FlowLayoutPanel {Dock=DockStyle.Top,AutoSize=true,Padding=new Padding(8)};
     public MainForm()
     {
-        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.3";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);Text="WinPart · Gestor de particiones · v0.9.4";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         Size=new Size(1100,800);MinimumSize=new Size(700,500);StartPosition=FormStartPosition.CenterScreen;BackColor=CanvasColor;
         var about=new Button {Text="Acerca de / GPL",AutoSize=true};about.Click+=(s,e)=>MessageBox.Show(this,"WinPart · software libre GPL-2.0-or-later.\r\nPaleta adaptada de GParted (Bart Hakvoort, Curtis Gedak).\r\nMotor Windows propio; no es GParted oficial.\r\nConsulta COPYING, THIRD_PARTY_NOTICES.md y la carpeta source incluida.","WinPart — Créditos");actions.Controls.Add(about);
         var refresh=new Button {Text="Actualizar discos",AutoSize=true};refresh.Click+=async(s,e)=>await RefreshData();actions.Controls.Add(refresh);
@@ -56,7 +56,7 @@ internal sealed partial class MainForm : Form
     }
     internal static void SmokeTest()
     {
-        DiskMediumDetection.VerifyFallbacks();
+        DiskMediumDetection.VerifyFallbacks();PartitionIdentity.Verify();
         using(var form=new MainForm())
         {
             var disk=new DiskLayout {Number=0,Name="Disco simulado",BusType=15,Style="GPT",UniqueId="SIMULATED",Complete=true,Size=500UL*1073741824};

@@ -44,6 +44,8 @@ internal sealed class DiskLayout
 internal sealed class PartitionLayout
 {
     public uint Number;
+    public string TypeGuid="",MbrType="";
+    public string Family {get{return Gap?"":PartitionIdentity.Family(TypeGuid,MbrType,FileSystem,IsBoot);}}
     public ulong Offset, Size;
     public string Letter="", Type="No determinado", FileSystem="No disponible", Label="";
     public ulong? Free, VolumeSize;
@@ -123,7 +125,7 @@ internal sealed partial class MainForm
                 {
                     var queued=pendingResizes.FirstOrDefault(q=>!q.IsVirtual&&!q.Create&&!q.Reset&&q.Disk.UniqueId==disk.UniqueId&&q.Part.Number==p.Number&&!p.Gap);
                     string fs=p.Gap?"Sin asignar":p.FileSystem+(queued!=null&&queued.FileSystem!=null?" → "+queued.FileSystem+" (pendiente)":"");
-                    var item=new ListViewItem(new[]{p.Title+(queued!=null&&queued.Delete?" (eliminar pendiente)":""),fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+CommandIcons.Role(disk,p)+" · "+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+CommandIcons.Role(disk,p)+" · "+p.FileSystem};var swatch=CommandIcons.Make(CommandIcons.ForPartition(disk,p),p.Gap?Color.Gray:Color.FromArgb(57,88,133),16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,11,11,5,5);if(queued!=null&&queued.Delete)item.ForeColor=Color.Firebrick;swatchSources.Add(swatch);swatches.Images.Add(swatch);
+                    var item=new ListViewItem(new[]{p.Title+(queued!=null&&queued.Delete?" (eliminar pendiente)":""),fs,p.Letter.Length>0?p.Letter+":":"—",p.Label,Space(p.Size),p.VolumeSize.HasValue&&p.Free.HasValue&&p.Free<=p.VolumeSize?Space(p.VolumeSize.Value-p.Free.Value):"—",p.Free.HasValue?Space(p.Free.Value):"—",(p.Family.Length>0?PartitionIdentity.Caption(p.Family)+" · ":"")+(p.IsBoot?"Arranque ":"")+(p.IsSystem?"Sistema ":"")+CommandIcons.Role(disk,p)+" · "+p.Type}) {Tag=p,ToolTipText=p.Title+" · "+CommandIcons.Role(disk,p)+" · "+p.FileSystem};var swatch=p.Family.Length>0?PartitionIdentity.Icon(p.Family,16):CommandIcons.Make(CommandIcons.ForPartition(disk,p),p.Gap?Color.Gray:Color.FromArgb(57,88,133),16);using(var graphics=Graphics.FromImage(swatch))using(var brush=new SolidBrush(PartitionStrip.BorderColor(p)))graphics.FillRectangle(brush,11,11,5,5);if(queued!=null&&queued.Delete)item.ForeColor=Color.Firebrick;swatchSources.Add(swatch);swatches.Images.Add(swatch);
                     item.ImageIndex=swatches.Images.Count-1;list.Items.Add(item);
                 }
                 int rowCount=segments.Count>0?segments.Count:disk.Partitions.Count;
@@ -162,7 +164,7 @@ internal sealed partial class MainForm
             {
                 var disk=result.FirstOrDefault(d=>d.Number==Convert.ToUInt32(row["DiskNumber"]));if(disk==null)continue;
                 string letter=Convert.ToString(row["DriveLetter"]).Trim('\0',' ');
-                disk.Partitions.Add(new PartitionLayout { IsBoot=Convert.ToBoolean(row["IsBoot"]),IsSystem=Convert.ToBoolean(row["IsSystem"]),Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,Type=PartitionType(Value(row,"GptType"),Value(row,"MbrType")) });
+                disk.Partitions.Add(new PartitionLayout { IsBoot=Convert.ToBoolean(row["IsBoot"]),IsSystem=Convert.ToBoolean(row["IsSystem"]),Number=Convert.ToUInt32(row["PartitionNumber"]),Offset=Convert.ToUInt64(row["Offset"]),Size=Convert.ToUInt64(row["Size"]),Letter=letter,TypeGuid=Value(row,"GptType"),MbrType=Value(row,"MbrType"),Type=PartitionType(Value(row,"GptType"),Value(row,"MbrType")) });
             }
             foreach(var disk in result) { disk.Complete=true; disk.ReadNote="Selecciona un bloque o una fila. Las particiones diminutas se amplían visualmente; tamaños exactos en la tabla."; }
         }
@@ -272,7 +274,7 @@ internal sealed class PartitionStrip : Control
                     using(var usedBrush=new SolidBrush(FileSystemPalette.Used))e.Graphics.FillRectangle(usedBrush,inner.X,inner.Y,used,inner.Height);
                 }
                 else if(!p.Gap)using(var unknown=new System.Drawing.Drawing2D.HatchBrush(System.Drawing.Drawing2D.HatchStyle.LightDownwardDiagonal,Color.LightGray,Color.White))e.Graphics.FillRectangle(unknown,inner);
-                if(inner.Width>100)using(var icon=CommandIcons.Make(CommandIcons.ForPartition(disk,p),Color.FromArgb(58,86,123),20))e.Graphics.DrawImage(icon,inner.X+5,inner.Y+5);
+                if(inner.Width>100)using(var icon=p.Family.Length>0?PartitionIdentity.Icon(p.Family,20):CommandIcons.Make(CommandIcons.ForPartition(disk,p),Color.FromArgb(58,86,123),20))e.Graphics.DrawImage(icon,inner.X+5,inner.Y+5);
                 if(IsDeleting!=null&&IsDeleting(p)){using(var overlay=new SolidBrush(Color.FromArgb(45,210,45,45)))e.Graphics.FillRectangle(overlay,inner);}
                 if(inner.Width>65)TextRenderer.DrawText(e.Graphics,(IsDeleting!=null&&IsDeleting(p)?"ELIMINAR (pendiente)":p.Gap?"Sin asignar":(p.Letter.Length>0?p.Letter+":":"Part. "+p.Number)+" · "+p.FileSystem)+Environment.NewLine+MainForm.MapSpace(p.Size),Font,inner,Color.FromArgb(25,35,45),TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
             }

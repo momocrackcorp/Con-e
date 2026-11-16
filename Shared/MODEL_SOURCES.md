@@ -17,3 +17,5 @@ Documentación técnica:
 * https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-physicaldisk
 
 La consulta no instala controladores, no pide elevación por sí sola ni modifica discos. Si el controlador rechaza la consulta y no hay otra evidencia, permanece «Medio no informado».
+
+Identificación visual de particiones Linux: https://uapi-group.org/specifications/specs/discoverable_partitions_specification/ . El distintivo indica tipo/formato, no una instalación arrancable. Windows en uso se identifica mediante MSFT_Partition.IsBoot; NTFS y EFI por sí solos no atribuyen un sistema operativo.

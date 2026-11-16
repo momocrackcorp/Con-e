@@ -26,6 +26,8 @@ internal sealed class PhysicalDiskInfo
 internal sealed class PhysicalPartitionInfo
 {
     public uint Number;public ulong Offset,Size;
+    public string TypeGuid="",MbrType="";public bool IsBoot;
+    public string Family {get{return PartitionIdentity.Family(TypeGuid,MbrType,FileSystem,IsBoot);}}
     public string Letter="",Label="",FileSystem="No disponible",Role="Partición",VolumeId="";
     public ulong? VolumeSize,Free;
     public string Title {get{return Letter.Length>0?Letter+": "+Label:"Partición "+Number+" · "+Role;}}
@@ -65,7 +67,7 @@ internal static class PhysicalStorage
             using(var q=Q(Storage,"SELECT * FROM MSFT_Partition"))using(var rows=q.Get())foreach(ManagementObject r in rows)using(r)
             {
                 var disk=disks.FirstOrDefault(d=>d.Number==U(r,"DiskNumber"));if(disk==null)continue;
-                var p=new PhysicalPartitionInfo {Number=(uint)U(r,"PartitionNumber"),Offset=U(r,"Offset"),Size=U(r,"Size"),Letter=S(r,"DriveLetter").Trim('\0',' ',':'),Role=PartitionRole(S(r,"GptType"),S(r,"MbrType"))};Tuple<string,string,ulong?,ulong?> v;
+                var p=new PhysicalPartitionInfo {Number=(uint)U(r,"PartitionNumber"),Offset=U(r,"Offset"),Size=U(r,"Size"),Letter=S(r,"DriveLetter").Trim('\0',' ',':'),TypeGuid=S(r,"GptType"),MbrType=S(r,"MbrType"),IsBoot=S(r,"IsBoot").Equals("True",StringComparison.OrdinalIgnoreCase),Role=PartitionRole(S(r,"GptType"),S(r,"MbrType"))};Tuple<string,string,ulong?,ulong?> v;
                 if(p.Letter.Length>0&&logical.TryGetValue(p.Letter,out v)){p.FileSystem=v.Item1.Length>0?v.Item1:"No disponible";p.Label=v.Item2;p.VolumeSize=v.Item3;p.Free=v.Item4;}
                 else try{using(var related=Q(Storage,"ASSOCIATORS OF {"+r.Path.Path+"} WHERE ResultClass=MSFT_Volume"))using(var volumes=related.Get())foreach(ManagementObject vol in volumes)using(vol){p.VolumeId=S(vol,"Path");p.FileSystem=S(vol,"FileSystem");p.Label=S(vol,"FileSystemLabel");ulong size;if(ulong.TryParse(S(vol,"Size"),out size))p.VolumeSize=size;if(ulong.TryParse(S(vol,"SizeRemaining"),out size))p.Free=size;}}catch{}
                 disk.Partitions.Add(p);

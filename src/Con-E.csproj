@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Con-E</AssemblyName>
-    <Version>0.16.5</Version>
+    <Version>0.16.6</Version>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -24,6 +24,7 @@
     <Compile Include="../Shared/DiskMediumDetection.cs" Link="Shared/DiskMediumDetection.cs" />
     <Compile Include="../Shared/PhysicalStorage.cs" Link="Shared/PhysicalStorage.cs" />
     <Compile Include="../Shared/DiskMiniature.cs" Link="Shared/DiskMiniature.cs" />
+    <Compile Include="../Shared/PartitionIdentity.cs" Link="Shared/PartitionIdentity.cs" />
     <EmbeddedResource Include="../Shared/disk-miniatures.png" LogicalName="StorageAtlas" />
     <EmbeddedResource Include="../Shared/usb-miniature.png" LogicalName="UsbMiniature" />
   </ItemGroup>

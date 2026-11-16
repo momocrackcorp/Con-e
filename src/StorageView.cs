@@ -62,7 +62,7 @@ internal sealed class StorageView : UserControl
         version++;scanCancellation?.Cancel();StopMonitor();disk=d;partition=null;device=null;foreach(Control old in volumeButtons.Controls.Cast<Control>().ToArray())old.Dispose();
         if(d==null){heading.Text="No se pudieron identificar discos";diskType.Text="Actualiza el inventario desde Mi equipo.";volumeCard.Visible=false;analyze.Enabled=false;return;}
         DiskSelected?.Invoke(d);volumeCard.Visible=true;heading.Text="Disco "+d.Number+" · "+d.Model;diskType.Text=d.Kind+" · "+d.Bus+" · "+StorageFormat.Size(d.Size)+" · "+d.Style+Environment.NewLine+d.Form+" · "+d.MediumSource+" · Miniatura ilustrativa";miniature.Kind=d.Art;miniature.Invalidate();
-        foreach(var p in d.Partitions.OrderBy(p=>p.Offset)){var item=p;var b=Button(p.Title+" · "+p.FileSystem);b.Tag=p;b.MaximumSize=new Size(Math.Max(220,ClientSize.Width-80),0);b.Click+=(s,e)=>ChoosePartition(item);volumeButtons.Controls.Add(b);}
+        foreach(var p in d.Partitions.OrderBy(p=>p.Offset)){var item=p;var b=Button(p.Title+" · "+p.FileSystem);b.Tag=p;if(p.Family.Length>0){b.Image=PartitionIdentity.Icon(p.Family,22);b.Text=PartitionIdentity.Caption(p.Family)+" · "+b.Text;b.TextImageRelation=TextImageRelation.ImageBeforeText;b.ImageAlign=ContentAlignment.MiddleLeft;b.Disposed+=(sender,args)=>b.Image.Dispose();}b.MaximumSize=new Size(Math.Max(220,ClientSize.Width-80),0);b.Click+=(s,e)=>ChoosePartition(item);volumeButtons.Controls.Add(b);}
         ChoosePartition(d.Partitions.FirstOrDefault(p=>p.Number==chosen)??d.Partitions.FirstOrDefault(p=>p.Letter.Length>0)??d.Partitions.FirstOrDefault());
     }
     void ChoosePartition(PhysicalPartitionInfo p)
@@ -71,7 +71,7 @@ internal sealed class StorageView : UserControl
         foreach(Button b in volumeButtons.Controls.OfType<Button>()){bool active=ReferenceEquals(b.Tag,p);b.FlatAppearance.BorderColor=active?ModernTheme.Accent:Color.FromArgb(45,52,63);b.FlatAppearance.BorderSize=active?2:1;}
         volumeCard.Selected=p!=null;
         if(p==null){title.Text="Sin particiones enumeradas";capacity.Text=disk?.Complete==true?"Disco sin particiones / sin asignar":"Lectura parcial de particiones";ring.SetSpace(0,0);analyze.Enabled=false;ClearTelemetry();Fit();return;}
-        title.Text=p.Title+" · "+p.FileSystem;SetCapacity();ClearTelemetry();ApplyAdvanced();analyze.Enabled=p.Letter.Length==1;notice.Text=p.Letter.Length==1?"SMART y horas corresponden al disco físico.":"Partición sin letra: se conservan sus datos; el análisis de carpetas no está disponible.";
+        title.Text=(p.Family.Length>0?PartitionIdentity.Caption(p.Family)+" · ":"")+p.Title+" · "+p.FileSystem;SetCapacity();ClearTelemetry();ApplyAdvanced();analyze.Enabled=p.Letter.Length==1;notice.Text=p.Letter.Length==1?"SMART y horas corresponden al disco físico.":"Partición sin letra: se conservan sus datos; el análisis de carpetas no está disponible.";
         StorageScan previous;if(cache.TryGetValue(CacheKey(),out previous))ShowResult(previous,true);
         Fit();StartMonitor();
     }

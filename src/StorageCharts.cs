@@ -36,8 +36,11 @@ internal sealed class FolderChart : UserControl
     ImageList swatches;readonly List<Bitmap> swatchImages=new List<Bitmap>();
     internal FolderChart()
     {
-        Height=235;Width=440;BackColor=ModernTheme.Surface;list.BackColor=ModernTheme.Surface;list.ForeColor=ModernTheme.Text;list.ShowItemToolTips=true;list.Columns.Add("Carpeta / grupo",200);list.Columns.Add("Tamaño",110);list.Columns.Add("%",65);
-        Controls.Add(list);Controls.Add(selection);Controls.Add(bar);Resize+=(s,e)=>{int w=Math.Max(200,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(100,w-160);list.Columns[1].Width=100;list.Columns[2].Width=60;};
+        MinimumSize=new Size(220,180);Height=235;Width=440;BackColor=ModernTheme.Surface;list.BackColor=ModernTheme.Surface;list.ForeColor=ModernTheme.Text;list.ShowItemToolTips=true;list.Columns.Add("Carpeta / grupo",200);list.Columns.Add("Tamaño",110);list.Columns.Add("%",65);
+        var layout=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=Padding.Empty,Padding=Padding.Empty};
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,29));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
+        bar.Dock=list.Dock=selection.Dock=DockStyle.Fill;bar.Margin=list.Margin=selection.Margin=Padding.Empty;
+        layout.Controls.Add(bar,0,0);layout.Controls.Add(list,0,1);layout.Controls.Add(selection,0,2);Controls.Add(layout);Resize+=(s,e)=>{int w=Math.Max(200,list.ClientSize.Width-20);list.Columns[0].Width=Math.Max(100,w-160);list.Columns[1].Width=100;list.Columns[2].Width=60;};
         list.SelectedIndexChanged+=(s,e)=>{if(list.SelectedItems.Count==0)return;int index=list.SelectedItems[0].Index;bar.Selected=index;bar.Invalidate();var item=Slices[index];double total=Slices.Sum(v=>(double)v.Bytes);selection.Text=item.Name+" · "+StorageFormat.Size(item.Bytes)+" · "+(total>0?item.Bytes/total*100:0).ToString("0.0")+" %";};
         bar.Picked+=i=>{if(i>=0&&i<list.Items.Count){list.Items[i].Selected=true;list.Items[i].EnsureVisible();}};Disposed+=(s,e)=>{swatches?.Dispose();foreach(var b in swatchImages)b.Dispose();};
     }
@@ -45,7 +48,12 @@ internal sealed class FolderChart : UserControl
     {
         Slices=slices;bar.Slices=slices;bar.Selected=-1;bar.Invalidate();AccessibleName=string.Join("; ",slices.Select(s=>s.Name+": "+StorageFormat.Size(s.Bytes)));list.BeginUpdate();
         try{list.Items.Clear();list.SmallImageList=null;swatches?.Dispose();foreach(var image in swatchImages)image.Dispose();swatchImages.Clear();swatches=new ImageList {ImageSize=new Size(12,12),ColorDepth=ColorDepth.Depth32Bit};list.SmallImageList=swatches;double total=slices.Sum(s=>(double)s.Bytes);int i=0;foreach(var slice in slices){var image=new Bitmap(12,12);using(var g=Graphics.FromImage(image))g.Clear(slice.Color);swatchImages.Add(image);swatches.Images.Add(image);list.Items.Add(new ListViewItem(new[]{slice.Name,StorageFormat.Size(slice.Bytes),(total>0?slice.Bytes/total*100:0).ToString("0.0")+" %"},i++){ToolTipText=slice.Name});}}
-        finally{list.EndUpdate();}selection.Text=slices.Count==0?"Sin analizar · sólo se mostrarán carpetas de la raíz.":"Selecciona un color o una carpeta para ver su tamaño.";Height=slices.Count==0?78:Math.Min(310,92+Math.Max(3,slices.Count)*25);
+        finally{list.EndUpdate();}selection.Text=slices.Count==0?"Sin analizar · sólo se mostrarán carpetas de la raíz.":"Selecciona un color o una carpeta para ver su tamaño.";Height=slices.Count==0?180:Math.Min(310,110+Math.Max(4,slices.Count)*25);
+    }
+    internal void VerifyLayout()
+    {
+        PerformLayout();
+        if(list.Height<65||list.Top<bar.Bottom||list.Bottom>selection.Top)throw new InvalidOperationException("Tabla de carpetas recortada");
     }
     sealed class SliceBar : Control
     {

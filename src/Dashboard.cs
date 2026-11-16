@@ -34,7 +34,7 @@ internal sealed partial class MainForm
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.4", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.5", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()

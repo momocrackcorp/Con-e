@@ -19,7 +19,7 @@ internal sealed class PhysicalDiskInfo
     public string Key {get{return Number+"|"+(UniqueId.Length>0?UniqueId:Serial.Length>0?Serial:inventoryInstance);}}
     public bool ModelMentionsM2 {get{return Regex.IsMatch(Model,@"\bM[.]?2\b",RegexOptions.IgnoreCase);}}
     public string Form {get{return KnownForm.Length>0?KnownForm:ModelMentionsM2?"M.2 indicado en modelo":"Formato físico no confirmado";}}
-    public string Kind {get{return IsVirtual?"VHD / disco virtual":BusType==17?"SSD NVMe":MediaType==3?"HDD":MediaType==4?"SSD":"Medio no informado";}}
+    public string Kind {get{return IsVirtual?"VHD / disco virtual":BusType==7&&MediaType!=3&&MediaType!=4?"Dispositivo USB":BusType==17?"SSD NVMe":MediaType==3?"HDD":MediaType==4?"SSD":"Medio no informado";}}
     public string Bus {get{return BusType==17?"NVMe":BusType==11?"SATA":BusType==3?"ATA":BusType==7?"USB":BusType==12?"SD":BusType==13?"MMC / eMMC":BusType==8?"RAID":BusType==14||BusType==15?"Virtual":"Conexión no informada";}}
     public string Art {get{return IsVirtual?"virtual":BusType==12||BusType==13?"sd":BusType==7&&MediaType!=3&&MediaType!=4?"usb":BusType==17?"m2-nvme":MediaType==3?"hdd":ModelMentionsM2&&(BusType==11||BusType==3)?"m2-sata":ModelMentionsM2?"generic":MediaType==4?"ssd":"generic";}}
 }

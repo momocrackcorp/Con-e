@@ -62,11 +62,12 @@ internal sealed partial class MainForm : Form
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
         tabs = new ModernTabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
         var home = new TabPage("Mi equipo") { BackColor = CanvasColor }; home.Controls.Add(dashboard); tabs.TabPages.Add(home);
+        sensorPage=new TabPage("Sensores y temperaturas") {BackColor=CanvasColor};tabs.TabPages.Add(sensorPage);
         var first = new TabPage("Detalles técnicos"); first.Controls.Add(summary);
         driverPage = new TabPage("Hardware y controladores"); driverPage.Controls.Add(BuildHardwareBrowser()); tabs.TabPages.Add(driverPage);
         var toolsPage = new TabPage("Herramientas") { BackColor = CanvasColor }; toolsPage.Controls.Add(BuildTools()); tabs.TabPages.Add(toolsPage);
         tabs.TabPages.Add(first);
-        sensorPage=new TabPage("Sensores y temperaturas") {BackColor=CanvasColor};tabs.TabPages.Insert(1,sensorPage);
+
 
 
         AddButton("↻  Actualizar datos", async () => await RefreshData());
@@ -84,7 +85,7 @@ internal sealed partial class MainForm : Form
         dashboard.Resize += (s, e) => ResizeCards();
         summary.ShowItemToolTips=true;summary.Resize+=(s,e)=>ResizeSummary();
         RenderDashboard();InitializeModernUI();
-        Shown += async (s, e) => { if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) {StartCpuMonitor();await RefreshData();} };
+        Shown += async (s, e) => { placeActions(); if (!Environment.GetCommandLineArgs().Contains("--smoke-test")) {StartCpuMonitor();await RefreshData();} };
     }
 
     void ResizeSummary()

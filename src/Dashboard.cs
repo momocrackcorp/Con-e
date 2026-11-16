@@ -247,7 +247,7 @@ internal sealed partial class MainForm
             int width = Math.Max(180, usable / columns - 14);
             foreach (var card in cards)
             {
-                card.MinimumSize = new Size(width, 0); card.MaximumSize = new Size(width, 0); card.Width = width;
+                card.MinimumSize = new Size(width, new[]{"Procesador","Memoria RAM","Memoria de video"}.Contains(Convert.ToString(card.Tag))?(int)(430*scale):0); card.MaximumSize = new Size(width, 0); card.Width = width;
                 int inner = Math.Max(80, width - card.Padding.Horizontal);
                 foreach (Control child in card.Controls)
                 {
@@ -298,6 +298,7 @@ internal sealed partial class MainForm
             unknown.Properties["Controlador"] = "No instalado (ejemplo)";
             form.current.Hardware.Add(unknown);
             form.RenderDashboard(); form.RenderHardwareBrowser(); form.Show(); Application.DoEvents();
+            if(!form.tabs.TabPages.Contains(form.sensorPage)||!form.actions.Visible||form.actions.Parent!=form.tabs.SelectedTab||form.dashboard.Top<form.actions.Bottom)throw new InvalidOperationException("Navegación o barra de acciones incorrecta al abrir");
             int uiThread=System.Threading.Thread.CurrentThread.ManagedThreadId,workerThread=uiThread,activeReads=0,maxReads=0,samples=0;
             var firstCpuCard=form.cards[0];
             form.StartCpuMonitor(()=>{workerThread=System.Threading.Thread.CurrentThread.ManagedThreadId;int active=System.Threading.Interlocked.Increment(ref activeReads);maxReads=Math.Max(maxReads,active);System.Threading.Thread.Sleep(30);System.Threading.Interlocked.Decrement(ref activeReads);System.Threading.Interlocked.Increment(ref samples);return new CpuMetric {Percent=42.5f,Detail="Muestra simulada de prueba"};},20);

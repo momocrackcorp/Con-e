@@ -63,7 +63,17 @@ internal sealed partial class MainForm
     void RenderRamSlots(FlowLayoutPanel card)
     {
         if(current==null)return;
-        var grid=new CompactRamGrid {Margin=new Padding(0,3,0,4)};
+        var miniatures=new FlowLayoutPanel {Name="ram-summary",AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,BackColor=ModernTheme.Raised,Padding=new Padding(8),Margin=new Padding(0,8,0,8)};
+        foreach(var slot in current.RamSlots)
+        {
+            var unit=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,0,8,0)};
+            unit.Controls.Add(new SlotPicture {Occupied=slot.Module!=null||slot.State.StartsWith("Ocupada"),Width=64,Height=26,AccessibleName=slot.Name+": "+slot.State});
+            unit.Controls.Add(new Label {Text=slot.Module!=null?"Ocupada":slot.State.StartsWith("Libre")?"Libre":"Sin confirmar",AutoSize=true,Font=new Font("Segoe UI",8),ForeColor=ModernTheme.Muted,UseMnemonic=false});
+            miniatures.Controls.Add(unit);
+        }
+        card.Controls.Add(miniatures);
+        const string key="Detalles de todas las ranuras RAM";
+        var grid=new CompactRamGrid {Margin=new Padding(0,3,0,4),Visible=expandedCards.Contains(key)};
         foreach(var slot in current.RamSlots)
         {
             string capacity="",type="",speed="";double bytes;
@@ -72,6 +82,7 @@ internal sealed partial class MainForm
             grid.AddSlot(slot,summary,ResizeCards);
         }
         card.Controls.Add(grid);
+        HeaderDetails(card,key,expanded=>grid.Visible=expanded);
         Help(card,"SMBIOS puede incluir memoria soldada. Una posición libre informada no garantiza que sea accesible o ampliable.");
     }
     static void RamCompactSmokeTest(MainForm form,string dir)
@@ -83,6 +94,11 @@ internal sealed partial class MainForm
         foreach(string name in new[]{"DIMM_A1","DIMM_A2","DIMM_B1","DIMM_B2"}){var m=new HardwareItem {Name=name,Category="Memoria RAM"};m.Properties["Capacidad (bytes)"]="8589934592";m.Properties["Tipo SMBIOS (código)"]="24";m.Properties["Velocidad configurada (MHz)"]="1600";m.Properties["Fabricante"]="Ejemplo";m.Properties["Serie"]="SERIE-PRUEBA";test.RamSlots.Add(new RamSlot {Name=name,State="Ocupada · módulo detectado",Module=m});}
         form.current=test;form.Width=1100;form.tabs.SelectedIndex=0;form.RenderDashboard();form.ResizeCards();Application.DoEvents();
         var card=form.cards.First(c=>Convert.ToString(c.Tag)=="Memoria RAM");var grid=card.Controls.OfType<CompactRamGrid>().Single();var tiles=grid.Controls.OfType<CompactRamTile>().ToArray();
+        var toggle=card.Controls.OfType<FlowLayoutPanel>().Single(h=>h.Name=="card-heading").Controls.OfType<Button>().Single();
+        if(grid.Visible||tiles.Length!=4||tiles.Any(t=>t.Controls.OfType<LinkLabel>().Any()))throw new Exception("RAM debe plegar todas las ranuras juntas");
+        toggle.PerformClick();Application.DoEvents();if(!grid.Visible)throw new Exception("No muestra el conjunto RAM");
+        toggle.PerformClick();Application.DoEvents();if(grid.Visible)throw new Exception("No oculta el conjunto RAM");
+        form.RenderDashboard();Application.DoEvents();card=form.cards.First(c=>Convert.ToString(c.Tag)=="Memoria RAM");grid=card.Controls.OfType<CompactRamGrid>().Single();tiles=grid.Controls.OfType<CompactRamTile>().ToArray();if(grid.Visible)throw new Exception("Se perdió el estado RAM");
         // Exercise the same production card at a fixed logical width, independent of runner screen limits.
         using(var preview=new Form {Text="Memoria RAM compacta · datos simulados",ClientSize=new Size(630,650),AutoScroll=true,BackColor=ModernTheme.Canvas,Font=form.Font})
         {
@@ -90,13 +106,13 @@ internal sealed partial class MainForm
             Action<int> fit=width=>{card.MinimumSize=card.MaximumSize=new Size(width,0);card.Width=width;int inner=width-card.Padding.Horizontal;foreach(Control child in card.Controls){if(child is Label)child.MaximumSize=new Size(inner,0);else if(child is FlowLayoutPanel){child.MinimumSize=child.MaximumSize=new Size(inner,0);}}preview.PerformLayout();card.PerformLayout();Application.DoEvents();};
             preview.Show();fit(600);
             using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-distribucion.png"));}
-            if(tiles.Length!=4||tiles[0].Top!=tiles[1].Top||tiles[2].Top<=tiles[0].Top||grid.Height>280*form.DeviceDpi/96f)throw new Exception("RAM no compacta: grid="+grid.Size+", tiles="+string.Join(";",tiles.Select(t=>t.Bounds.ToString())));
-            int collapsed=tiles[0].Height;tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height<=collapsed)throw new Exception("No expande detalle de módulo RAM");tiles[0].ToggleDetailsForTest();Application.DoEvents();if(tiles[0].Height!=collapsed)throw new Exception("No contrae detalle de módulo RAM");
+            grid.Visible=true;fit(600);if(tiles[0].Top!=tiles[1].Top||tiles[2].Top<=tiles[0].Top)throw new Exception("RAM no organiza las ranuras en dos columnas");
+
             using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-ancha.png"));}
             fit(290);preview.ClientSize=new Size(320,650);Application.DoEvents();if(tiles[0].Top==tiles[1].Top)throw new Exception("RAM no se adapta a una columna en tarjetas estrechas");
             using(var image=new Bitmap(preview.Width,preview.Height)){preview.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(System.IO.Path.Combine(dir,"ram-compacta-estrecha.png"));}preview.Close();
         }
-        System.IO.File.WriteAllText(System.IO.Path.Combine(dir,"ram-hdd.txt"),"OK: cuatro módulos RAM en filas compactas, dos/una columna, detalle expandible y plegable. HDD WD10EARX/WD10EAVS detrás de RAID reconocidos por catálogo; RPM, descriptor válido/inválido, SSD y VHD sin reclasificar indebidamente.");
+        System.IO.File.WriteAllText(System.IO.Path.Combine(dir,"ram-hdd.txt"),"OK: cuatro módulos RAM en filas compactas, dos/una columna, un control de encabezado para todas las ranuras, estado persistente. HDD WD10EARX/WD10EAVS detrás de RAID reconocidos por catálogo; RPM, descriptor válido/inválido, SSD y VHD sin reclasificar indebidamente.");
         form.current=before;form.Size=originalSize;form.RenderDashboard();
     }
 
@@ -118,7 +134,7 @@ internal sealed class CompactRamTile : TableLayoutPanel
 {
     readonly FlowLayoutPanel text=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=Padding.Empty};
     readonly FlowLayoutPanel detail=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,6,0,0),Visible=false};
-    readonly LinkLabel toggle;
+
     internal CompactRamTile(RamSlot slot,string summary,Action changed)
     {
         AutoSize=true;AutoSizeMode=AutoSizeMode.GrowAndShrink;ColumnCount=2;RowCount=2;BackColor=ModernTheme.Raised;Padding=new Padding(6);Margin=new Padding(0,3,6,3);Tag=slot;
@@ -128,7 +144,8 @@ internal sealed class CompactRamTile : TableLayoutPanel
         string state=occupied?"Ocupada":slot.State.StartsWith("Libre")?"Libre":"Sin confirmar";
         text.Controls.Add(new Label {Text=slot.Name+" · "+state,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",10,FontStyle.Bold),ForeColor=ModernTheme.Text,Margin=new Padding(0,0,0,2)});
         text.Controls.Add(new Label {Text=summary,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",9.5f),ForeColor=ModernTheme.Muted,Margin=Padding.Empty});
-        if(slot.Module!=null){foreach(var p in slot.Module.Properties)detail.Controls.Add(new Label {Text=p.Key+": "+p.Value,UseMnemonic=false,AutoSize=true,ForeColor=ModernTheme.Muted,Font=new Font("Segoe UI",9.5f),Margin=new Padding(0,0,0,3)});toggle=new LinkLabel {Text="Detalles",AutoSize=true,Font=new Font("Segoe UI",9.5f),LinkColor=ModernTheme.Accent,Margin=new Padding(0,2,0,0)};toggle.LinkClicked+=(s,e)=>{detail.Visible=!detail.Visible;toggle.Text=detail.Visible?"Ocultar detalles":"Detalles";PerformLayout();changed?.Invoke();};text.Controls.Add(toggle);}
+        if(slot.Module!=null)foreach(var p in slot.Module.Properties)detail.Controls.Add(new Label {Text=p.Key+": "+p.Value,UseMnemonic=false,AutoSize=true,ForeColor=ModernTheme.Muted,Font=new Font("Segoe UI",9.5f),Margin=new Padding(0,0,0,3)});
+        detail.Visible=true;
         Controls.Add(text,1,0);Controls.Add(detail,0,1);SetColumnSpan(detail,2);AccessibleName=slot.Name+": "+slot.State+" · "+summary;
     }
     internal void SetWidth(int width)
@@ -136,7 +153,7 @@ internal sealed class CompactRamTile : TableLayoutPanel
         MinimumSize=MaximumSize=new Size(width,0);Width=width;int available=Math.Max(65,width-Padding.Horizontal-66);
         text.MinimumSize=text.MaximumSize=new Size(available,0);foreach(Control c in text.Controls)c.MaximumSize=new Size(available,0);detail.MinimumSize=detail.MaximumSize=new Size(Math.Max(80,width-Padding.Horizontal),0);foreach(Control c in detail.Controls)c.MaximumSize=new Size(Math.Max(80,width-Padding.Horizontal),0);
     }
-    internal void ToggleDetailsForTest(){if(toggle!=null){detail.Visible=!detail.Visible;toggle.Text=detail.Visible?"Ocultar detalles":"Detalles";PerformLayout();}}
+
 }
 internal sealed class SlotPicture : Control
 {

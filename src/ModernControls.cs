@@ -17,7 +17,7 @@ namespace UIModernization
     }
     public class ModernCardPanel : FlowLayoutPanel
     {
-        Color borderColor=Color.FromArgb(45,52,63);int borderRadius=12;bool selected;
+        Color borderColor=ModernTheme.Border;int borderRadius=12;bool selected;
         public bool Selected {get{return selected;}set{selected=value;Invalidate();}}
         public Color CardBackColor {get{return BackColor;}set{BackColor=value;Invalidate();}}
         public Color BorderColor {get{return borderColor;}set{borderColor=value;Invalidate();}}
@@ -42,21 +42,17 @@ namespace UIModernization
             base.OnPaint(e);if(Width<2||Height<2)return;e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;
             using(var path=ModernTheme.Rounded(new RectangleF(0,0,Width-1,Height-1),Height/2f))
             using(var background=new SolidBrush(TrackColor))
-            {e.Graphics.FillPath(background,path);var state=e.Graphics.Save();e.Graphics.SetClip(path);if(IsAvailable&&Value>0)using(var brush=new SolidBrush(FillColor))e.Graphics.FillRectangle(brush,0,0,Width*Value/100,Height);e.Graphics.Restore(state);}
+            {e.Graphics.FillPath(background,path);var state=e.Graphics.Save();e.Graphics.SetClip(path);if(IsAvailable&&Value>0)using(var brush=new LinearGradientBrush(ClientRectangle,FillColor,Color.FromArgb(91,194,220),LinearGradientMode.Horizontal))e.Graphics.FillRectangle(brush,0,0,Width*Value/100,Height);e.Graphics.Restore(state);}
         }
     }
     internal sealed class ModernTabControl : TabControl
     {
-        public ModernTabControl(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw,true);BackColor=ModernTheme.Canvas;}
-        protected override void OnPaint(PaintEventArgs e)
+        public ModernTabControl(){DrawMode=TabDrawMode.OwnerDrawFixed;BackColor=ModernTheme.Canvas;}
+        protected override void OnDrawItem(DrawItemEventArgs e)
         {
-            e.Graphics.Clear(ModernTheme.Canvas);
-            for(int i=0;i<TabCount;i++)
-            {
-                var box=GetTabRect(i);using(var brush=new SolidBrush(i==SelectedIndex?ModernTheme.Raised:ModernTheme.Surface))e.Graphics.FillRectangle(brush,Rectangle.Inflate(box,-2,-2));
-                TextRenderer.DrawText(e.Graphics,TabPages[i].Text,Font,box,i==SelectedIndex?ModernTheme.Text:ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);
-                if(i==SelectedIndex)using(var pen=new Pen(ModernTheme.Accent,3))e.Graphics.DrawLine(pen,box.Left+8,box.Bottom-3,box.Right-8,box.Bottom-3);
-            }
+            var box=GetTabRect(e.Index);using(var brush=new SolidBrush(ModernTheme.Surface))e.Graphics.FillRectangle(brush,box);
+            TextRenderer.DrawText(e.Graphics,TabPages[e.Index].Text,Font,box,e.Index==SelectedIndex?ModernTheme.Text:ModernTheme.Muted,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+            if(e.Index==SelectedIndex)using(var pen=new Pen(ModernTheme.Accent,3))e.Graphics.DrawLine(pen,box.Left+8,box.Bottom-3,box.Right-8,box.Bottom-3);
         }
     }
 }

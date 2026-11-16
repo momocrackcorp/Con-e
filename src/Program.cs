@@ -54,10 +54,10 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.15.2";
+        Text = "Con-E · Diagnóstico y herramientas · v0.16.0";
         Icon=AppVisualIdentity.MainIcon;ShowIcon=true;
         BackColor = CanvasColor;
-        Size = new Size(1100, 800); MinimumSize = new Size(650, 480);
+        Size = new Size(1440, 900); MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
         tabs = new ModernTabControl { Dock = DockStyle.Fill, Padding = new Point(18, 9), Multiline = true };
@@ -66,19 +66,21 @@ internal sealed partial class MainForm : Form
         driverPage = new TabPage("Hardware y controladores"); driverPage.Controls.Add(BuildHardwareBrowser()); tabs.TabPages.Add(driverPage);
         var toolsPage = new TabPage("Herramientas") { BackColor = CanvasColor }; toolsPage.Controls.Add(BuildTools()); tabs.TabPages.Add(toolsPage);
         tabs.TabPages.Add(first);
-        AddButton("Temperaturas y sensores",OpenSensors);
+        sensorPage=new TabPage("Sensores y temperaturas") {BackColor=CanvasColor};tabs.TabPages.Insert(1,sensorPage);
 
-        AddButton("Explicaciones", ToggleHelp);
-        AddButton("Actualizar", async () => await RefreshData());
-        AddButton("Guardar informe", Export);
-        AddButton("Buscar fabricante", SearchManufacturer);
-        AddButton("Abrir herramientas USB", () =>
+
+        AddButton("↻  Actualizar datos", async () => await RefreshData());
+        AddButton("▤  Generar informe", Export);
+        AddButton("⌕  Buscar fabricante", SearchManufacturer);
+        AddButton("Herramientas USB", () =>
         {
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
             if (Directory.Exists(path)) Open(path);
             else MessageBox.Show("No se encontró la carpeta Tools junto a Con-E.exe.");
         });
-        Controls.Add(tabs); Controls.Add(actions); Controls.Add(BuildHeader()); Controls.Add(status);
+        Controls.Add(tabs);Controls.Add(status);
+        Action placeActions=()=>{if(tabs.SelectedTab!=null){tabs.SelectedTab.Controls.Add(actions);actions.BringToFront();}};
+        tabs.SelectedIndexChanged+=(s,e)=>{placeActions();if(tabs.SelectedTab==sensorPage&&sensorView==null)OpenSensors();};placeActions();
         dashboard.Resize += (s, e) => ResizeCards();
         summary.ShowItemToolTips=true;summary.Resize+=(s,e)=>ResizeSummary();
         RenderDashboard();InitializeModernUI();
@@ -212,7 +214,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.15.2\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.16.0\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

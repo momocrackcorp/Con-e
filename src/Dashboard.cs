@@ -34,7 +34,7 @@ internal sealed partial class MainForm
         var name = new Label { Text = "Con-E", AutoSize = true, Font = new Font(Font.FontFamily, 22, FontStyle.Bold), ForeColor = BlueColor, Margin = new Padding(0, 0, 18, 0) };
         var logo=new PictureBox {Image=AppVisualIdentity.MainIcon.ToBitmap(),Size=new Size(36,36),SizeMode=PictureBoxSizeMode.Zoom,Margin=new Padding(0,4,12,0)};logo.Disposed+=(s,e)=>logo.Image.Dispose();header.Controls.Add(logo);
         header.Controls.Add(name);
-        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.15.2", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
+        header.Controls.Add(new Label { Text = "Tu computador, más claro.  ·  v0.16.0", AutoSize = true, ForeColor = MutedColor, Margin = new Padding(0, 12, 0, 0) });
         return header;
     }
     Control BuildTools()
@@ -48,6 +48,8 @@ internal sealed partial class MainForm
             if (!Directory.Exists(path)) { MessageBox.Show("No se encontró la carpeta Tools junto a Con-E.exe.", "Con-E"); return; }
             Open(path);
         }));
+        panel.Controls.Add(ActionButton("Mostrar u ocultar explicaciones", ToggleHelp));
+        panel.Controls.Add(ActionButton("Temperaturas y sensores", OpenSensors));
         panel.Controls.Add(ActionButton("Guardar informe del equipo", Export));
         panel.Controls.Add(ActionButton("Consultar aplicaciones actualizables (WinGet)", () => OpenWinget(false)));
         panel.Controls.Add(ActionButton("Actualizar aplicaciones (administrador)", () => OpenWinget(true)));
@@ -81,11 +83,11 @@ internal sealed partial class MainForm
     }
     FlowLayoutPanel Card(string glyph, string title)
     {
-        var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=Color.FromArgb(45,52,63),BorderRadius=12,Width=300,Tag=title };
+        var card = new ModernCardPanel { FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(18),Margin=new Padding(7),CardBackColor=ModernTheme.Surface,BorderColor=ModernTheme.Border,BorderRadius=12,Width=300,Tag=title };
         WireCard(card,card);
         var header=new FlowLayoutPanel {Name="card-heading",AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,BackColor=ModernTheme.Surface,Margin=new Padding(0,0,0,14)};
         header.Controls.Add(new ComponentPicture {Kind=title=="Almacenamiento"?title+" "+Read("Tipos de almacenamiento"):title,Width=42,Height=42,AccessibleName=title,Margin=new Padding(0,0,8,0)});
-        header.Controls.Add(new Label {Text=title,AutoSize=true,Font=new Font(Font.FontFamily,11,FontStyle.Bold),ForeColor=BlueColor,Margin=new Padding(0,10,0,0)});
+        header.Controls.Add(new Label {Text=title,AutoSize=true,Font=new Font(Font.FontFamily,14,FontStyle.Bold),ForeColor=TextColor,Margin=new Padding(0,10,0,0)});
         card.Controls.Add(header);card.Selected=selectedCardTitle==title;cards.Add(card);dashboard.Controls.Add(card);return card;
     }
     Label Line(FlowLayoutPanel card, string text, bool prominent = false)
@@ -107,19 +109,26 @@ internal sealed partial class MainForm
     {
         var labels = keys.Select(key => Line(card, key + ": " + Read(key))).ToArray();
         foreach (var label in labels) label.Visible = expandedCards.Contains(title);
-        Button toggle = null;
-        toggle = ActionButton(expandedCards.Contains(title) ? "Ocultar detalles" : title, () =>
+        HeaderDetails(card,title,expanded =>
         {
-            bool expanded = !expandedCards.Contains(title);
-            if (expanded) expandedCards.Add(title); else expandedCards.Remove(title);
-            foreach (var label in labels) label.Visible = expanded;
+            foreach(var label in labels)label.Visible=expanded;
             if(title=="Ver detalle del procesador")foreach(var diagram in card.Controls.OfType<CoreDiagram>())diagram.Visible=expanded;
-            toggle.Text = expanded ? "Ocultar detalles" : title;
-            ResizeCards();
         });
-        toggle.Tag = "expand:" + title;
-        card.Controls.Add(toggle); card.Controls.SetChildIndex(toggle, card.Controls.Count - labels.Length - 1);
     }
+    Button HeaderDetails(FlowLayoutPanel card,string key,Action<bool> change)
+    {
+        var header=card.Controls.OfType<FlowLayoutPanel>().First(c=>c.Name=="card-heading");
+        Button toggle=null;
+        toggle=ActionButton(expandedCards.Contains(key)?"Ocultar detalles ⌃":"Mostrar detalles ⌄",()=>
+        {
+            bool expanded=!expandedCards.Contains(key);
+            if(expanded)expandedCards.Add(key);else expandedCards.Remove(key);
+            change(expanded);toggle.Text=expanded?"Ocultar detalles ⌃":"Mostrar detalles ⌄";ResizeCards();
+        });
+        toggle.Tag="expand:"+key;toggle.Font=new Font(Font.FontFamily,9);toggle.Margin=new Padding(0,5,0,3);
+        toggle.AccessibleName="Detalles de "+Convert.ToString(card.Tag);header.Controls.Add(toggle);return toggle;
+    }
+
     void ToggleHelp()
     {
         helpVisible = !helpVisible;
@@ -143,12 +152,11 @@ internal sealed partial class MainForm
             Help(identity, "El modelo y la serie son los datos registrados por el fabricante en el equipo.");
 
             var cpu = Card("⚙", "Procesador");
-            lblCpuValue=Line(cpu,"Sin lectura",true);lblCpuValue.Font=new Font(Font.FontFamily,24,FontStyle.Bold);
-            barCpuUsage=new ModernProgressBar {Width=240,Height=14,IsAvailable=false,FillColor=ModernTheme.Accent,TrackColor=ModernTheme.Track,Margin=new Padding(0,4,0,6)};cpu.Controls.Add(barCpuUsage);
+            lblCpuValue=Line(cpu,"Sin lectura",true);lblCpuValue.Font=new Font(Font.FontFamily,36,FontStyle.Bold);
+            barCpuUsage=new ModernProgressBar {Width=240,Height=18,IsAvailable=false,FillColor=ModernTheme.Accent,TrackColor=ModernTheme.Track,Margin=new Padding(0,4,0,6)};cpu.Controls.Add(barCpuUsage);
             lblCpuSample=Line(cpu,"CPU: esperando lectura WMI");UpdateCpuControls(lastCpuMetric);
             AddBrand(cpu, Read("Marca del procesador"));
-            Line(cpu, Read("Marca del procesador"), true);
-            Line(cpu, Read("Procesador"), true); Line(cpu, "Núcleos / hilos: " + Read("Núcleos / procesadores lógicos"));
+            Line(cpu, Read("Procesador"), true);
             if(current!=null&&current.CoreThreads.Count>0)
             {
                 Line(cpu,current.CoreThreads.Count+" núcleos físicos · "+current.CoreThreads.Sum()+" hilos lógicos",true);
@@ -167,15 +175,11 @@ internal sealed partial class MainForm
                 double used = current.RamTotalGiB.Value - current.RamAvailableGiB.Value;
                 double percent = used / current.RamTotalGiB.Value * 100;
                 var usage=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,Margin=new Padding(0,0,0,4)};
-                usage.Controls.Add(new UsageDial {Value=percent,Width=84,Height=76,AccessibleName="RAM utilizada: "+percent.ToString("0")+" %",Margin=new Padding(0,0,8,0)});
-                var amounts=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,14,0,0)};
+                usage.Controls.Add(new UsageDial {Value=percent,Width=156,Height=156,Font=new Font(Font.FontFamily,24),AccessibleName="RAM utilizada: "+percent.ToString("0")+" %",Margin=new Padding(0,0,8,0)});
+                var amounts=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,FlowDirection=FlowDirection.TopDown,WrapContents=false,Margin=new Padding(0,38,0,0)};
                 Line(amounts,used.ToString("0.0")+" GiB en uso · "+percent.ToString("0")+" %");Line(amounts,"Disponible: "+current.RamAvailableGiB.Value.ToString("0.0")+" GiB");usage.Controls.Add(amounts);ram.Controls.Add(usage);
             }
             else Line(ram, "Uso de RAM: no disponible");
-            if(current != null) foreach(var module in current.Hardware.Where(h => h.Category == "Memoria RAM"))
-            {
-                string maker; if(module.Properties.TryGetValue("Fabricante", out maker)) AddBrand(ram, maker);
-            }
             Line(ram, Read("Ranuras RAM"));
             RenderRamSlots(ram);
             Help(ram, "Es la memoria de trabajo de los programas abiertos. Pulsa Actualizar para obtener otra lectura; no es un monitor continuo.");
@@ -307,11 +311,11 @@ internal sealed partial class MainForm
             using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(dir,"moderno-cpu.png"),ImageFormat.Png);}
             if(BrandLogo.Resolve("HP Inc.") != "hp" || BrandLogo.Resolve("Advanced Micro Devices, Inc.") != "amd" || BrandLogo.Resolve("Fabricante desconocido") != null) throw new InvalidOperationException("Detección de marca incorrecta");
             foreach(string brand in new[] { "intel", "amd", "arm", "hp", "dell", "lenovo", "asus", "acer", "nvidia", "samsung", "qualcomm" }) if(BrandLogo.Get(brand).Width == 0) throw new InvalidOperationException("Logo inválido");
-            var biosCard = form.cards.First(c => c.Controls.OfType<Button>().Any(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie"));
-            var expand = biosCard.Controls.OfType<Button>().Single(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie");
+            var biosCard = form.cards.First(c => c.Controls.OfType<FlowLayoutPanel>().Where(h=>h.Name=="card-heading").SelectMany(h=>h.Controls.OfType<Button>()).Any(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie"));
+            var expand = biosCard.Controls.OfType<FlowLayoutPanel>().Where(h=>h.Name=="card-heading").SelectMany(h=>h.Controls.OfType<Button>()).Single(b => Convert.ToString(b.Tag) == "expand:Ver modelo y números de serie");
             int collapsedHeight = biosCard.Height;
             expand.PerformClick(); Application.DoEvents();
-            if (biosCard.Height <= collapsedHeight || expand.Text != "Ocultar detalles") throw new InvalidOperationException("La tarjeta no se expande");
+            if (biosCard.Height <= collapsedHeight || !expand.Text.StartsWith("Ocultar detalles")) throw new InvalidOperationException("La tarjeta no se expande");
             form.dashboard.ScrollControlIntoView(biosCard); Application.DoEvents();
             using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size)); image.Save(Path.Combine(dir, "detalles-expandidos.png"), ImageFormat.Png); }
             expand.PerformClick(); Application.DoEvents();

@@ -62,7 +62,7 @@ internal sealed partial class MainForm
     SensorView sensorView;TabPage sensorPage;
     void OpenSensors()
     {
-        if(sensorView==null||sensorView.IsDisposed){sensorView=new SensorView();sensorPage=new TabPage("Temperaturas y sensores"){BackColor=CanvasColor};sensorPage.Controls.Add(sensorView);tabs.TabPages.Add(sensorPage);if(!Environment.GetCommandLineArgs().Contains("--smoke-test"))sensorView.Start(false);}
+        if(sensorView==null||sensorView.IsDisposed){sensorView=new SensorView();if(sensorPage==null){sensorPage=new TabPage("Sensores y temperaturas"){BackColor=CanvasColor};tabs.TabPages.Add(sensorPage);}sensorPage.Controls.Add(sensorView);sensorView.SendToBack();if(!Environment.GetCommandLineArgs().Contains("--smoke-test"))sensorView.Start(false);}
         tabs.SelectedTab=sensorPage;
     }
     static void SensorSmokeTest(MainForm form,string directory)

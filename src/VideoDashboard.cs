@@ -5,21 +5,24 @@ using System.Linq;
 using System.Windows.Forms;
 using UIModernization;
 
-internal sealed class VideoAdapterPanel : FlowLayoutPanel
+internal sealed class VideoAdapterPanel : ModernCardPanel
 {
     readonly FlowLayoutPanel header=new FlowLayoutPanel {AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,WrapContents=true,Margin=Padding.Empty};
     readonly Label name;
     internal string VendorBrand;
     internal VideoAdapterPanel(VideoAdapterInfo adapter)
     {
-        Name="gpu-adapter";Tag=adapter;FlowDirection=FlowDirection.TopDown;WrapContents=false;AutoSize=true;AutoSizeMode=AutoSizeMode.GrowAndShrink;BackColor=ModernTheme.Raised;Padding=new Padding(8);Margin=new Padding(0,4,0,6);Width=260;
+        Name="gpu-adapter";Tag=adapter;FlowDirection=FlowDirection.TopDown;WrapContents=false;AutoSize=true;AutoSizeMode=AutoSizeMode.GrowAndShrink;BackColor=ModernTheme.Raised;Padding=new Padding(12);Margin=new Padding(0,4,0,6);Width=260;
         VendorBrand=adapter.Brand;
         if(VendorBrand!=null)header.Controls.Add(new BrandLogo(VendorBrand) {Width=76,Height=38,BackColor=ModernTheme.Raised,Margin=new Padding(0,0,8,2),AccessibleName="Fabricante: "+VendorBrand});
-        name=new Label {Text=adapter.Name,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",10.5f,FontStyle.Bold),ForeColor=ModernTheme.Text,Margin=new Padding(0,7,0,4)};header.Controls.Add(name);Controls.Add(header);
+        name=new Label {Text=adapter.Name,UseMnemonic=false,AutoSize=true,Font=new Font("Segoe UI",12f,FontStyle.Bold),ForeColor=ModernTheme.Text,Margin=new Padding(0,7,0,4)};header.Controls.Add(name);Controls.Add(header);
         Add("Memoria dedicada (DXGI): "+VideoMemory.MiB(adapter.DedicatedVideo));
         Add("Memoria compartida informada: "+VideoMemory.MiB(adapter.SharedSystem));
         if(adapter.DedicatedSystem.GetValueOrDefault()>0)Add("Memoria de sistema dedicada: "+VideoMemory.MiB(adapter.DedicatedSystem));
         if(adapter.Source!="DXGI")Add("Identificación WMI · reservas DXGI no disponibles");
+        var extra=new Label {Text="Fuente: "+adapter.Source+" · Fabricante PCI: "+adapter.Vendor.ToString("X4"),AutoSize=true,Visible=false,ForeColor=ModernTheme.Muted,UseMnemonic=false};Controls.Add(extra);
+        var toggle=new Button {Text="Mostrar detalles ⌄",AutoSize=true,FlatStyle=FlatStyle.Flat,ForeColor=ModernTheme.Accent,BackColor=ModernTheme.Surface,Font=new Font("Segoe UI",9),Margin=new Padding(0,4,0,3)};toggle.FlatAppearance.BorderColor=ModernTheme.Border;
+        toggle.Click+=(s,e)=>{extra.Visible=!extra.Visible;toggle.Text=extra.Visible?"Ocultar detalles ⌃":"Mostrar detalles ⌄";};header.Controls.Add(toggle);
         Resize+=(s,e)=>Fit();Fit();AccessibleName=adapter.Name+" · "+(VendorBrand??"Fabricante sin identificar");
     }
     void Add(string text){Controls.Add(new Label {Text=text,UseMnemonic=false,AutoSize=true,ForeColor=ModernTheme.Muted,Margin=new Padding(0,2,0,3)});}

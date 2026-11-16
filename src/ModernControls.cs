@@ -51,9 +51,11 @@ namespace UIModernization
         protected override void WndProc(ref Message m)
         {
             base.WndProc(ref m);
-            if(m.Msg==0x000F&&IsHandleCreated&&SelectedIndex>=0)
-                using(var g=Graphics.FromHwnd(Handle))using(var pen=new Pen(Color.Black,2))
+            if((m.Msg==0x000F||m.Msg==0x0317||m.Msg==0x0318)&&IsHandleCreated&&SelectedIndex>=0)
+            {
+                using(var g=(m.Msg==0x000F?Graphics.FromHwnd(Handle):Graphics.FromHdc(m.WParam)))using(var pen=new Pen(Color.Black,2))
                 {var frame=DisplayRectangle;frame.Inflate(2,2);g.DrawRectangle(pen,frame);}
+            }
         }
         protected override void OnDrawItem(DrawItemEventArgs e)
         {

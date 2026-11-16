@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Con-E</AssemblyName>
-    <Version>0.16.7</Version>
+    <Version>0.16.8</Version>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="app.ico" LogicalName="ConE.AppIcon" />
+    <EmbeddedResource Include="Resources/Char_cone.png" LogicalName="ConE.CharacterIllustration" />
     <Content Include="app.ico" CopyToOutputDirectory="PreserveNewest" TargetPath="Con-E.ico" />
     <Content Include="app-icon.png" CopyToOutputDirectory="PreserveNewest" TargetPath="Con-E-icon.png" />
   </ItemGroup>

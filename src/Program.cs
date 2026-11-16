@@ -54,7 +54,7 @@ internal sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "Con-E · Diagnóstico y herramientas · v0.16.7";
+        Text = "Con-E · Diagnóstico y herramientas · v0.16.8";
         Icon=AppVisualIdentity.MainIcon;ShowIcon=true;
         BackColor = CanvasColor;
         Size = new Size(1440, 900); MinimumSize = new Size(650, 480);
@@ -218,7 +218,7 @@ internal sealed partial class MainForm : Form
         using (var dialog = new SaveFileDialog { Filter = "Informe de texto (*.txt)|*.txt", FileName = "Con-E_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt" })
         {
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            var text = new StringBuilder("Con-E v0.16.7\r\n\r\n");
+            var text = new StringBuilder("Con-E v0.16.8\r\n\r\n");
             foreach (var row in current.Summary) text.AppendLine(row[0] + ": " + row[1]);
             text.AppendLine("\r\nCONTROLADORES (estado PnP; no garantiza buen funcionamiento)");
             foreach (var row in current.Drivers) text.AppendLine(string.Join(" | ", row));

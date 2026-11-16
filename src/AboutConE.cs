@@ -21,7 +21,19 @@ internal sealed class AboutConE : Form
         var names=new FlowLayoutPanel {Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(10,4,0,0)};
         names.Controls.Add(new Label {Text="Con-E",AutoSize=true,Font=new Font(Font.FontFamily,25,FontStyle.Bold),ForeColor=ModernTheme.Accent,Margin=Padding.Empty});
         names.Controls.Add(new Label {Text="Diagnóstico y herramientas para Windows · v"+version,AutoSize=true,ForeColor=ModernTheme.Muted,Margin=new Padding(0,8,0,0)});
-        heading.Controls.Add(names,1,0);layout.Controls.Add(heading,0,0);layout.Controls.Add(text,0,1);
+        heading.Controls.Add(names,1,0);layout.Controls.Add(heading,0,0);
+        var body=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,160));body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+        var portraitPanel=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty,Padding=new Padding(8)};
+        portraitPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));portraitPanel.RowStyles.Add(new RowStyle(SizeType.Percent,100));portraitPanel.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
+        using(var stream=typeof(AboutConE).Assembly.GetManifestResourceStream("ConE.CharacterIllustration"))
+        using(var original=Image.FromStream(stream))
+        {
+            var portrait=new PictureBox {Name="cone-original-portrait",Image=new Bitmap(original),Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.White,AccessibleName="Coné, ilustración original aportada por el usuario"};
+            portrait.Disposed+=(s,e)=>portrait.Image.Dispose();portraitPanel.Controls.Add(portrait,0,0);
+        }
+        portraitPanel.Controls.Add(new Label {Text="Coné\nUn guiño a Pepo",Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleCenter,ForeColor=ModernTheme.Muted,Font=new Font(Font.FontFamily,9),UseMnemonic=false},0,1);
+        body.Controls.Add(portraitPanel,0,0);body.Controls.Add(text,1,0);layout.Controls.Add(body,0,1);
         Add("Hecha en Ñuble, Chile",true);
         Add("Desarrollada por Omar Águila\nLaboratorios Momocrackcorp\nNoviembre de 2026\nPueblo Seco, San Ignacio, Ñuble, Chile.");
         Add("Un guiño a nuestra historieta",true);
@@ -62,6 +74,8 @@ internal sealed partial class MainForm
         using(var dialog=new AboutConE())
         {
             dialog.Show(owner);Application.DoEvents();
+            var portraits=dialog.Controls.Find("cone-original-portrait",true);
+            if(portraits.Length!=1||((PictureBox)portraits[0]).Image==null||((PictureBox)portraits[0]).Image.Height<=((PictureBox)portraits[0]).Image.Width)throw new InvalidOperationException("La ilustración original no está incorporada");
             foreach(int width in new[]{760,600})
             {
                 dialog.Width=width;Application.DoEvents();
